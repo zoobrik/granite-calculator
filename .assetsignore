@@ -1,0 +1,22 @@
+# Files NOT uploaded to Cloudflare Workers Static Assets.
+# SPA fallback is handled natively via wrangler.jsonc → assets.not_found_handling.
+# _redirects and 404.html are kept in the repo for portability to Pages / Netlify /
+# GitHub Pages but excluded from this deploy.
+.git
+.git/**
+.gitignore
+.assetsignore
+node_modules
+node_modules/**
+audit
+audit/**
+screenshots
+screenshots/**
+uploads
+uploads/**
+CLAUDE.md
+wrangler.jsonc
+_redirects
+404.html
+*.log
+.DS_Store
