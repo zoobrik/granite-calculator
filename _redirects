@@ -1,0 +1,4 @@
+# Cloudflare Pages / Netlify SPA fallback.
+# Serve index.html for any path the host doesn't recognize so the
+# in-browser router can render the correct route.
+/*    /index.html   200

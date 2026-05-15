@@ -1,0 +1,18 @@
+# macOS
+.DS_Store
+._*
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*~
+
+# Local artifacts
+node_modules/
+*.log
+
+# Audit / scratch (keep these out of the deploy)
+audit/
+screenshots/
+uploads/

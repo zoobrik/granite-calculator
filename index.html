@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Granite Calculator — Free construction & home improvement calculators</title>
+
+<!-- Primary meta -->
+<meta name="description" content="Free, fast, accurate calculators for paint, concrete, drywall, tile, lumber, roofing, and landscape materials. No signup, no ads, every formula published." />
+<meta name="keywords" content="construction calculator, paint calculator, concrete calculator, drywall calculator, tile calculator, board feet, roof pitch, mulch calculator, gravel calculator, sod calculator, deck calculator, free calculator" />
+<meta name="author" content="Granite Calculator" />
+<meta name="robots" content="index, follow, max-image-preview:large" />
+<meta name="theme-color" content="#fafaf7" />
+<meta name="theme-color" content="#1a1a1a" media="(prefers-color-scheme: dark)" />
+<meta name="theme-color" content="#fafaf7" media="(prefers-color-scheme: light)" />
+<meta name="color-scheme" content="light dark" />
+<link rel="canonical" href="https://granitecalculator.com/" id="seo-default-canonical" />
+
+<!-- Open Graph -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Granite Calculator" />
+<meta property="og:title" content="Granite Calculator — Free construction calculators" />
+<meta property="og:description" content="Free, fast, accurate calculators for paint, concrete, drywall, tile, lumber, roofing, and landscape materials. Every formula published." />
+<meta property="og:url" content="https://granitecalculator.com/" />
+<meta property="og:locale" content="en_US" />
+<meta property="og:image" content="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 630'%3E%3Crect width='1200' height='630' fill='%231a1a1a'/%3E%3Ctext x='100' y='280' font-family='system-ui,sans-serif' font-size='80' font-weight='600' fill='%23fafaf7'%3EGranite Calculator%3C/text%3E%3Ctext x='100' y='370' font-family='system-ui,sans-serif' font-size='38' fill='%23a8a8a0'%3EFree construction calculators%3C/text%3E%3Ctext x='100' y='430' font-family='system-ui,sans-serif' font-size='38' fill='%23a8a8a0'%3EPaint, concrete, drywall, tile, lumber, roofing, landscape%3C/text%3E%3C/svg%3E" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Granite Calculator — free construction and home-improvement calculators" />
+
+<!-- Twitter / X -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Granite Calculator — Free construction calculators" />
+<meta name="twitter:description" content="Honest construction math: paint, concrete, drywall, tile, lumber, roofing, landscape. No ads. No signup." />
+
+<!-- Icons + manifest -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='3' y='3' width='18' height='18' rx='3' fill='%231a1a1a'/%3E%3Ctext x='12' y='17' font-family='Geist Mono,monospace' font-size='14' font-weight='600' fill='%23fafaf7' text-anchor='middle'%3E∑%3C/text%3E%3C/svg%3E" />
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='28' fill='%231a1a1a'/%3E%3Ctext x='96' y='130' font-family='Geist Mono,monospace' font-size='110' font-weight='600' fill='%23fafaf7' text-anchor='middle'%3E%E2%88%91%3C/text%3E%3C/svg%3E" />
+<link rel="manifest" href="/site.webmanifest" />
+
+<!-- Default JSON-LD: WebSite + Organization -->
+<script type="application/ld+json" id="seo-default-jsonld">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "name": "Granite Calculator",
+      "url": "https://granitecalculator.com/",
+      "description": "Free construction and home-improvement calculators with published formulas.",
+      "inLanguage": "en-US"
+    },
+    {
+      "@type": "Organization",
+      "name": "Granite Calculator",
+      "url": "https://granitecalculator.com/",
+      "email": "hello@granitecalculator.com"
+    }
+  ]
+}
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css" />
+<script>
+  // SPA path restore — when 404.html (GitHub Pages-style hosts) bounces an
+  // unknown path back here as ?__redirect=..., put that real path back into
+  // the URL bar before React mounts. No-op on Cloudflare Pages / Netlify
+  // (which serve this index.html directly via _redirects).
+  (function () {
+    try {
+      var p = new URLSearchParams(window.location.search).get('__redirect');
+      if (p) window.history.replaceState(null, '', p);
+    } catch (e) {}
+  })();
+
+  // Theme bootstrap — runs before paint to avoid flash
+  (function () {
+    try {
+      var stored = localStorage.getItem('theme');
+      var sys = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.dataset.theme = stored || sys;
+      var meta = document.querySelector('meta[name="theme-color"]:not([media])');
+      if (meta) meta.setAttribute('content', document.documentElement.dataset.theme === 'dark' ? '#1a1a1a' : '#fafaf7');
+    } catch (e) {}
+  })();
+</script>
+</head>
+<body>
+<div id="root"></div>
+<noscript>
+  <div style="max-width:760px;margin:48px auto;padding:0 20px;font-family:system-ui,sans-serif;line-height:1.6;color:#111">
+    <h1 style="font-size:32px;letter-spacing:-0.02em;margin:0 0 12px">Granite Calculator</h1>
+    <p>Free, fast, accurate construction calculators for paint, concrete, drywall, tile, lumber, roofing, and landscape projects. Every formula is published — no ads, no signup, no tracking.</p>
+    <p>This site needs JavaScript to run. Enable JavaScript in your browser settings, then reload the page.</p>
+
+    <h2 style="font-size:20px;margin:32px 0 8px">Browse by category</h2>
+    <ul>
+      <li><a href="/category/paint">Paint calculators</a></li>
+      <li><a href="/category/concrete">Concrete calculators</a></li>
+      <li><a href="/category/drywall">Drywall calculators</a></li>
+      <li><a href="/category/tile">Tile calculators</a></li>
+      <li><a href="/category/lumber">Lumber calculators</a></li>
+      <li><a href="/category/roofing">Roofing calculators</a></li>
+      <li><a href="/category/landscape">Landscape calculators</a></li>
+    </ul>
+
+    <h2 style="font-size:20px;margin:32px 0 8px">All calculators</h2>
+    <ul>
+      <li><a href="/c/paint/wall-paint">Wall Paint Calculator</a></li>
+      <li><a href="/c/paint/trim-ceiling-paint">Trim &amp; Ceiling Paint</a></li>
+      <li><a href="/c/paint/square-footage">Square Footage Calculator</a></li>
+      <li><a href="/c/concrete/concrete-slab">Concrete Slab Calculator</a></li>
+      <li><a href="/c/concrete/footing-pier">Footing &amp; Pier Calculator</a></li>
+      <li><a href="/c/drywall/drywall-sheets">Drywall Sheet Calculator</a></li>
+      <li><a href="/c/drywall/drywall-finishing">Mud, Tape &amp; Screws</a></li>
+      <li><a href="/c/tile/tile-boxes">Tile Box Calculator</a></li>
+      <li><a href="/c/tile/grout-thinset">Grout &amp; Thinset Calculator</a></li>
+      <li><a href="/c/lumber/board-feet">Board Feet Calculator</a></li>
+      <li><a href="/c/lumber/stair-stringer">Stair Stringer Calculator</a></li>
+      <li><a href="/c/lumber/deck-boards">Deck Board Calculator</a></li>
+      <li><a href="/c/roofing/roof-pitch">Roof Pitch Calculator</a></li>
+      <li><a href="/c/roofing/shingle-bundles">Shingle Bundle Calculator</a></li>
+      <li><a href="/c/landscape/mulch">Mulch Calculator</a></li>
+      <li><a href="/c/landscape/gravel">Gravel Calculator</a></li>
+      <li><a href="/c/landscape/sod">Sod Calculator</a></li>
+    </ul>
+  </div>
+</noscript>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="src/icons.jsx"></script>
+<script type="text/babel" src="src/viz.jsx"></script>
+<script type="text/babel" src="src/data.jsx"></script>
+<script type="text/babel" src="src/primitives.jsx"></script>
+<script type="text/babel" src="src/layout.jsx"></script>
+<script type="text/babel" src="src/homepage.jsx"></script>
+<script type="text/babel" src="src/calculators.jsx"></script>
+<script type="text/babel" src="src/more-calculators.jsx"></script>
+<script type="text/babel" src="src/extra-calculators.jsx"></script>
+<script type="text/babel" src="src/calc-pages.jsx"></script>
+<script type="text/babel" src="src/category-page.jsx"></script>
+<script type="text/babel" src="src/app.jsx"></script>
+</body>
+</html>
