@@ -8,16 +8,21 @@ Static single-page site: a collection of construction-material calculators (pain
 
 Production domain: `granitecalculator.com`. Used in `index.html` (canonical, og:url, JSON-LD url + email), `sitemap.xml` (every entry), `robots.txt` (sitemap pointer), and `src/layout.jsx` (footer mailto). Keep these in sync if it ever changes.
 
+GitHub repo: `https://github.com/zoobrik/granite-calculator`. Hosted on Cloudflare Pages — auto-deploys every push to `main`. Cloudflare's GitHub OAuth occasionally drops; if a push doesn't trigger a build, reconnect via Pages project → Settings → Builds & deployments → Source → Reconnect, then push another commit. Direct upload via `wrangler pages deploy . --project-name=granite-calculator` works as a fallback (needs `wrangler login` first).
+
 ## Tests
 
-Two node scripts under `tests/` verify every calculator's `compute()` output against hand-checked reference values, plus edge cases (zero, empty string, division-by-zero) and metric/imperial round-trip stability:
+Three node scripts under `tests/` verify calculator behavior:
 
 ```
-node tests/calcs.test.js      # 25 cases — math + edge cases
-node tests/metric.test.js     # 22 cases — metric output + convertState round-trips
+node tests/calcs.test.js          # 25 cases — math + edge cases
+node tests/metric.test.js         # 22 cases — metric output + convertState round-trips
+node tests/small-room.test.js     # human-readable dump of every calc with tiny inputs (catches "1 bucket for 5 sf"-style absurdities)
 ```
 
-Both transpile JSX with `@babel/core` (install via `cd /tmp/parsechk && npm i @babel/core @babel/preset-env @babel/plugin-transform-react-jsx` if missing). The mocks in each script cover only what compute functions touch — no React renderer, no DOM. The "1 failed" each script currently reports is a self-test of intentionally non-equivalent inputs (3″ vs 8 cm in mulch, my arithmetic vs the calc's), not a real failure.
+All three transpile JSX with `@babel/core` (install via `cd /tmp/parsechk && npm i @babel/core @babel/preset-env @babel/plugin-transform-react-jsx` if missing). The mocks cover only what `compute()` touches — no React renderer, no DOM. The "1 failed" each unit script currently reports is a self-check of intentionally non-equivalent reference inputs (3″ vs 8 cm in mulch; my paint arithmetic vs the calc's), not a real failure.
+
+Run all three before committing any change to a `compute()` function.
 
 ## Running locally
 
@@ -102,6 +107,19 @@ Several calculators rely on numeric constants that map to manufacturer specs. **
 - **Shingle bundles**: 3 bundles per square (architectural). 33 lf per hip & ridge bundle. 4 squares per synthetic underlayment roll.
 - **Roof pitch slope categories**: <9.5° low-slope (membrane required, IRC); 9.5–18.4° conventional low-slope; 18.4–36.9° standard; ≥45° very steep.
 - **Stair stringer**: actual riser must be ≤7.75″ (IRC max) and >4″; calc shows a `⚠` warning if violated.
+- **Deck boards**: total board count uses `ceil(rows × runLength ÷ stockLength × 1.10)` — assumes off-cuts are reused across rows (a competent installer does this) and adds 10% for cuts and defects. The earlier formula `rows × ceil(runLength/stockLength)` doubled board counts whenever stock was much longer than the run; don't revert.
+
+### Unit-aware input bounds
+
+Several `NumberInput` `min`/`max`/`step` values switch on `isImp` so the same field accepts sane values in either system. Precedent set by:
+
+- Wall paint ceiling height: 6–30 ft / 1.8–9 m
+- Drywall and trim/ceiling ceiling height: 6–20 ft / 1.8–6 m
+- Footing/pier diameter: 6–36 in / 15–90 cm
+- Mulch and gravel depth (slider): 1–8 in / 2–20 cm and 1–12 in / 2–30 cm
+- Concrete thickness (slider): 2–24 in / 50–600 mm
+
+Step also drops to `0.1` in metric so users can dial in fractional meters cleanly (e.g. `2.4 m`). When adding a new dimensional input, follow this pattern — a hardcoded `min={6}` blocks every reasonable metric value.
 
 ### Adding a calculator
 
@@ -140,4 +158,6 @@ Static SEO baseline lives in `index.html`: meta description, OpenGraph, Twitter 
 - `audit/`, `screenshots/`, and `uploads/` are reference images, not code.
 - The site has no FAQ section by design — the user is not a construction professional and explicitly does not want to surface advice beyond the published formulas. Don't reintroduce FAQ copy.
 - The site has no About page by design — removed because the user prefers to keep the site focused on the calculators.
-- Don't change the math constants listed above without an industry source — the user previously caught a 10× error in grout density and a 4× error in drywall screw count, and both came from defaults that "looked reasonable" but weren't backed by manufacturer data.
+- Don't change the math constants listed above without an industry source — the user previously caught a 10× error in grout density, a 4× error in drywall screw count, a 3.5× error in drywall mud, and a ~2× error in deck-board count from ignoring off-cut reuse. All four came from defaults that "looked reasonable" but weren't backed by manufacturer data.
+- Cloudflare's Workers Static Assets validator rejects the obvious `_redirects` SPA rule (`/*  /index.html  200`) as an "infinite loop" if you ever switch back to a Workers (not Pages) deploy. The repo carries `_redirects` for Pages/Netlify portability and `wrangler.jsonc` (with `assets.not_found_handling: "single-page-application"`) for Workers — keep both unless you commit to one host permanently.
+- Cloudflare Pages can keep serving an old build after a successful push if its GitHub OAuth has dropped silently. If the live `<head>` doesn't reflect a recent commit (verify with `curl -s https://granitecalculator.com/src/calculators.jsx | grep -A1 "Ceiling height"`), reconnect the git source and push another commit — "Retry deployment" replays the OLD commit and won't help.
