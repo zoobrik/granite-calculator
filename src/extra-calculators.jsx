@@ -447,34 +447,41 @@ DeckBoardsCalculator.imperialOnly = true;
 DeckBoardsCalculator.compute = function (state) {
   const L = parseFloat(state.length) || 0;
   const W = parseFloat(state.width) || 0;
-  const bw = parseFloat(state.boardWidth) || 5.5; // actual inches
+  const bw = parseFloat(state.boardWidth) || 5.5;            // actual inches
   const bl = parseFloat(state.boardLength) || 12;
   const gap = parseFloat(state.gap) || 0.125;
   const runLengthFt = state.orientation === 'length' ? L : W;
   const perpFt = state.orientation === 'length' ? W : L;
-  // Rows of boards across the perpendicular direction
+  // Rows of boards across the perpendicular direction.
   const rowsAcross = Math.ceil((perpFt * 12) / (bw + gap));
-  // Each row needs runLengthFt of board; how many stock boards per row?
-  const boardsPerRow = Math.ceil(runLengthFt / bl);
-  const totalBoards = rowsAcross * boardsPerRow;
+  // Total linear feet of decking the deck needs (rows × run length). This
+  // assumes off-cuts are reused as next-row pieces — a competent installer
+  // does this routinely. The earlier formula treated every row as needing a
+  // full stock board, which doubled board counts whenever stock was much
+  // longer than the run (e.g. 8 ft stock cut to 4 ft rows).
+  const totalLfNeeded = rowsAcross * runLengthFt;
+  const boardsExact = Math.ceil(totalLfNeeded / bl);
+  // Add 10% for cut waste, defects, and off-cuts that won't reuse cleanly.
+  const totalBoards = Math.ceil(boardsExact * 1.10);
   const linearFt = totalBoards * bl;
   const totalSf = L * W;
   const waste = (linearFt * bw / 12) - totalSf;
-  const wastePct = waste / totalSf * 100;
-  // Screws: ~2 per joist crossing, joists typically 16" oc
+  const wastePct = totalSf > 0 ? waste / totalSf * 100 : 0;
+  // Screws: ~2 per joist crossing, joists at 16" o.c.
   const joists = Math.ceil(runLengthFt / 1.333) + 1;
-  const screws = totalBoards * joists * 2;
+  // Each row crosses every joist; screw count scales with rows, not raw board count.
+  const screws = rowsAcross * joists * 2;
   return {
     primary: { value: totalBoards, decimals: 0, unit: 'boards', label: `${bl}-ft deck boards` },
-    sub: `Covers ${XF.int(totalSf)} sq ft in ${rowsAcross} rows. Total of ${XF.int(linearFt)} linear feet — about ${XF.dec(wastePct, 0)}% waste from rounding.`,
+    sub: `Covers ${XF.int(totalSf)} sq ft in ${rowsAcross} rows (${XF.int(totalLfNeeded)} lf needed). ${totalBoards} boards × ${bl} ft = ${XF.int(linearFt)} lf, including 10% waste for cuts and defects.`,
     breakdown: [
-      { label: 'Deck area',          value: `${XF.int(totalSf)} sq ft` },
-      { label: 'Rows across',        value: `${rowsAcross}` },
-      { label: 'Boards per row',     value: `${boardsPerRow}` },
-      { label: 'Total boards',       value: `${totalBoards}` },
-      { label: 'Total linear feet',  value: `${XF.int(linearFt)} lf` },
-      { label: 'Waste',              value: `${XF.dec(wastePct, 0)}%` },
-      { label: 'Deck screws (~)',    value: `${XF.int(screws)}` },
+      { label: 'Deck area',         value: `${XF.int(totalSf)} sq ft` },
+      { label: 'Rows across',       value: `${rowsAcross}` },
+      { label: 'Linear feet needed',value: `${XF.int(totalLfNeeded)} lf` },
+      { label: 'Total boards',      value: `${totalBoards}` },
+      { label: 'Total linear feet', value: `${XF.int(linearFt)} lf` },
+      { label: 'Waste',             value: `${XF.dec(wastePct, 0)}%` },
+      { label: 'Deck screws (~)',   value: `${XF.int(screws)}` },
     ],
   };
 };
@@ -724,12 +731,12 @@ Object.assign(window.Calcs, {
     subtitle: 'Number of deck boards, linear feet, and screws — accounting for orientation and gap.',
     category: 'lumber',
     formula: [
-      ['rows across', '= ceil(perpendicular × 12 ÷ (bw + gap))'],
-      ['boards/row',  '= ceil(run length ÷ board length)'],
-      ['total',       '= rows × boards/row'],
-      ['screws',      '= boards × joists × 2'],
+      ['rows across',     '= ceil(perpendicular × 12 ÷ (bw + gap))'],
+      ['linear ft needed','= rows × run length'],
+      ['boards',          '= ceil(lf needed ÷ board length × 1.10)'],
+      ['screws',          '= rows × joists × 2'],
     ],
-    howWorks: `Decking is sold in nominal sizes that lie about their actual width: a "2×6" is really 5.5 inches across; "5/4 × 6" composite is also typically 5.5 inches. To estimate boards, divide the deck's perpendicular dimension by (board width + gap) — most decks use a 1/8" gap to let water drain between boards. Then cover the parallel dimension with whatever stock length you bought. Buying 16-foot boards instead of 12-footers can wipe out cut waste on a long deck, but they're heavier and harder to handle solo. Screws: budget about two per joist crossing per board.`,
+    howWorks: `Decking is sold in nominal sizes that lie about their actual width: a "2×6" is really 5.5 inches across; "5/4 × 6" composite is also typically 5.5 inches. To estimate boards, divide the deck's perpendicular dimension by (board width + gap) — most decks use a 1/8" gap to let water drain between boards — then multiply by the run length to get the total linear feet of decking needed. Divide by your stock length, add 10% for cuts and defects, and that's your board count. This formula assumes you'll reuse off-cuts where they fit (a competent installer does this), so an 8-ft stock board cut for 4-ft rows yields two pieces, not one. Buying 16-foot boards instead of 12-footers can wipe out cut waste on a long deck, but they're heavier and harder to handle solo. Screws: budget about two per joist crossing per row.`,
   },
   'sod': {
     Component: SodCalculator,

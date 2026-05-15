@@ -188,12 +188,15 @@ test('shingles 40x30 6/12 50lf 2valley', 'shingle-bundles',
   { length: 40, width: 30, pitch: 6, ridgeLf: 50, valleys: 2 }, 'imperial',
   [['primary.value', 46, 0.001]]);
 
-// Deck: 16x12, 5.5" boards, 12 ft stock, length orientation, 1/8 gap
-// runLengthFt=16, perpFt=12; rowsAcross=ceil(144/(5.5+0.125))=ceil(144/5.625)=ceil(25.6)=26
-// boardsPerRow=ceil(16/12)=2; total=52
+// Deck: 16x12, 5.5" boards, 12 ft stock, length orientation, 1/8 gap.
+// rowsAcross=ceil(144/5.625)=26; totalLfNeeded=26*16=416; boardsExact=ceil(416/12)=35;
+// +10% waste = ceil(35*1.10)=39. (Off-cut reuse: each 12-ft board fills the 12-ft
+// portion of one row, and 1 board's 12-ft length cuts into three 4-ft pieces that
+// supply three rows' 4-ft remainders. So 26 + ceil(26/3) = 35 boards optimal,
+// padded 10% for cuts/defects = 39.)
 test('deck 16x12 5.5in 12ft length 1/8gap', 'deck-boards',
   { length: 16, width: 12, boardWidth: 5.5, boardLength: 12, orientation: 'length', gap: 0.125 }, 'imperial',
-  [['primary.value', 52, 0.001]]);
+  [['primary.value', 39, 0.001]]);
 
 // Sod: 30x20, slab
 // sf=600, withWaste=642, pallets=ceil(642/450)=2
