@@ -104,13 +104,16 @@ function NumberInput({ value, onChange, unit, min = 0, max = 99999, step = 1, pl
     <div className="input-wrap">
       <input
         type="text"
-        inputMode="decimal"
+        inputMode={min < 0 ? 'decimal' : 'numeric'}
         value={draft}
         placeholder={placeholder}
         disabled={disabled}
         onChange={(e) => {
-          // Extract first valid signed decimal: optional leading "-", digits, optional single dot, more digits.
-          const m = e.target.value.match(/^-?\d*\.?\d*/);
+          // Extract first valid decimal. Disallow the leading "-" if min >= 0
+          // so "-5" silently clamping to 0 doesn't surprise the user.
+          const allowNeg = min < 0;
+          const re = allowNeg ? /^-?\d*\.?\d*/ : /^\d*\.?\d*/;
+          const m = e.target.value.match(re);
           const raw = m ? m[0] : '';
           setDraft(raw);
           commit(raw);

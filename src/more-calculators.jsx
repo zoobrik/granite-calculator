@@ -519,7 +519,10 @@ function SquareFootageCalculator({ state, setField, units }) {
   const isImp = units === 'imperial';
   const { shapes } = state;
   const addShape = (type) => {
-    setField('shapes', [...shapes, { id: Date.now(), type, length: 10, width: 10, diameter: 6 }]);
+    // Date.now() + random tail avoids id collisions when two shapes are added
+    // in the same millisecond (rapid clicks → React key warnings + lost state).
+    const id = `s-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    setField('shapes', [...shapes, { id, type, length: 10, width: 10, diameter: 6 }]);
   };
   const updateShape = (id, key, value) => {
     setField('shapes', shapes.map(s => s.id === id ? { ...s, [key]: value } : s));

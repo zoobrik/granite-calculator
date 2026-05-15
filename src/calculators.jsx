@@ -204,6 +204,9 @@ function ConcreteCalculator({ state, setField, units }) {
             <NumberInput value={length} onChange={(v) => setField('length', v)} unit={isImp ? 'ft' : 'm'} min={0.5} max={500}/>
             <NumberInput value={width} onChange={(v) => setField('width', v)} unit={isImp ? 'ft' : 'm'} min={0.5} max={500}/>
           </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 6, fontSize: 11.5, color: 'var(--fg-subtle)' }}>
+            <span>Base</span><span>Height</span>
+          </div>
         </div>
       )}
 

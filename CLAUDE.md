@@ -8,6 +8,17 @@ Static single-page site: a collection of construction-material calculators (pain
 
 Production domain: `granitecalculator.com`. Used in `index.html` (canonical, og:url, JSON-LD url + email), `sitemap.xml` (every entry), `robots.txt` (sitemap pointer), and `src/layout.jsx` (footer mailto). Keep these in sync if it ever changes.
 
+## Tests
+
+Two node scripts under `tests/` verify every calculator's `compute()` output against hand-checked reference values, plus edge cases (zero, empty string, division-by-zero) and metric/imperial round-trip stability:
+
+```
+node tests/calcs.test.js      # 25 cases — math + edge cases
+node tests/metric.test.js     # 22 cases — metric output + convertState round-trips
+```
+
+Both transpile JSX with `@babel/core` (install via `cd /tmp/parsechk && npm i @babel/core @babel/preset-env @babel/plugin-transform-react-jsx` if missing). The mocks in each script cover only what compute functions touch — no React renderer, no DOM. The "1 failed" each script currently reports is a self-test of intentionally non-equivalent inputs (3″ vs 8 cm in mulch, my arithmetic vs the calc's), not a real failure.
+
 ## Running locally
 
 No package manager, no build, no tests. The site needs to be served over HTTP — opening `index.html` via `file://` will not work (Babel-standalone fails CORS when fetching `src/*.jsx` from the filesystem).
