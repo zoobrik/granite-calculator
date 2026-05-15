@@ -35,7 +35,14 @@ function PaintCalculator({ state, setField, units }) {
 
       <div className="field">
         <label className="field-label">Ceiling height</label>
-        <NumberInput value={height} onChange={(v) => setField('height', v)} unit={isImp ? 'ft' : 'm'} min={6} max={30}/>
+        <NumberInput
+          value={height}
+          onChange={(v) => setField('height', v)}
+          unit={isImp ? 'ft' : 'm'}
+          min={isImp ? 6 : 1.8}
+          max={isImp ? 30 : 9}
+          step={isImp ? 1 : 0.1}
+        />
       </div>
 
       <div className="field">
@@ -310,7 +317,14 @@ function DrywallCalculator({ state, setField, units }) {
 
       <div className="field">
         <label className="field-label">Ceiling height</label>
-        <NumberInput value={height} onChange={(v) => setField('height', v)} unit={isImp ? 'ft' : 'm'} min={6} max={20}/>
+        <NumberInput
+          value={height}
+          onChange={(v) => setField('height', v)}
+          unit={isImp ? 'ft' : 'm'}
+          min={isImp ? 6 : 1.8}
+          max={isImp ? 20 : 6}
+          step={isImp ? 1 : 0.1}
+        />
       </div>
 
       <div className="field">

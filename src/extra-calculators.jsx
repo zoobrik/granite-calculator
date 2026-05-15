@@ -27,7 +27,14 @@ function FootingPierCalculator({ state, setField, units }) {
       {type === 'tube' ? (
         <div className="field">
           <label className="field-label">Diameter <span className="field-hint">{isImp ? 'inches' : 'cm'}</span></label>
-          <XNI value={diameter} onChange={(v) => setField('diameter', v)} unit={isImp ? 'in' : 'cm'} min={6} max={36}/>
+          <XNI
+            value={diameter}
+            onChange={(v) => setField('diameter', v)}
+            unit={isImp ? 'in' : 'cm'}
+            min={isImp ? 6 : 15}
+            max={isImp ? 36 : 90}
+            step={isImp ? 1 : 1}
+          />
         </div>
       ) : (
         <div className="field">
@@ -566,7 +573,14 @@ function TrimCeilingPaintCalculator({ state, setField, units }) {
       </div>
       <div className="field">
         <label className="field-label">Ceiling height</label>
-        <XNI value={height} onChange={(v) => setField('height', v)} unit={isImp ? 'ft' : 'm'} min={6} max={20}/>
+        <XNI
+          value={height}
+          onChange={(v) => setField('height', v)}
+          unit={isImp ? 'ft' : 'm'}
+          min={isImp ? 6 : 1.8}
+          max={isImp ? 20 : 6}
+          step={isImp ? 1 : 0.1}
+        />
       </div>
       <div className="field">
         <label className="field-label">Baseboard height <span className="field-hint">trim width</span></label>
