@@ -62,8 +62,20 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css" />
+
+<!-- Async-load both stylesheets via preload-and-swap to remove them from the
+     critical render path (PageSpeed Insights recommendation). Browser fetches
+     as preload (non-blocking), then the onload handler flips the rel to
+     "stylesheet" so the rules apply. <noscript> blocks add the standard
+     blocking link for users without JS.
+     Geist weights trimmed to 400/500/600 and Geist Mono to 400/500 — the
+     other weights (300, 700, mono 600) are never referenced in styles.css. -->
+<link rel="preload" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<link rel="preload" href="/styles.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="/styles.css">
+</noscript>
 <script>
   // SPA path restore — when 404.html (GitHub Pages-style hosts) bounces an
   // unknown path back here as ?__redirect=..., put that real path back into
@@ -130,21 +142,27 @@
   </div>
 </noscript>
 
-<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<!-- Production builds (vs .development): 110→11 KB and 1080→132 KB respectively.
+     Strips dev-only warnings, type checks, and stack-trace decorators. Required
+     for any reasonable PageSpeed score on the calc pages. -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" integrity="sha384-DGyLxAyjq0f9SPpVevD6IgztCFlnMF6oW/XQGmfe+IsZ8TqEiDrcHkMLKI6fiB/Z" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" integrity="sha384-gTGxhz21lVGYNMcdJOyq01Edg0jhn/c22nsx0kyqP0TxaV5WVdsSH1fSDUf5YJj1" crossorigin="anonymous"></script>
 
-<script type="text/babel" src="src/icons.jsx"></script>
-<script type="text/babel" src="src/viz.jsx"></script>
-<script type="text/babel" src="src/data.jsx"></script>
-<script type="text/babel" src="src/primitives.jsx"></script>
-<script type="text/babel" src="src/layout.jsx"></script>
-<script type="text/babel" src="src/homepage.jsx"></script>
-<script type="text/babel" src="src/calculators.jsx"></script>
-<script type="text/babel" src="src/more-calculators.jsx"></script>
-<script type="text/babel" src="src/extra-calculators.jsx"></script>
-<script type="text/babel" src="src/calc-pages.jsx"></script>
-<script type="text/babel" src="src/category-page.jsx"></script>
-<script type="text/babel" src="src/app.jsx"></script>
+<!-- Pre-transpiled by build.js (esbuild, JSX → JS). No @babel/standalone at
+     runtime, no JSX in the browser. Same 12-script load order as before; each
+     IIFE-wrapped to keep per-file scope isolation. Source lives in src/*.jsx;
+     run `npm run build` (or `npm run dev` for watch mode) to regenerate. -->
+<script src="/dist/icons.js"></script>
+<script src="/dist/viz.js"></script>
+<script src="/dist/data.js"></script>
+<script src="/dist/primitives.js"></script>
+<script src="/dist/layout.js"></script>
+<script src="/dist/homepage.js"></script>
+<script src="/dist/calculators.js"></script>
+<script src="/dist/more-calculators.js"></script>
+<script src="/dist/extra-calculators.js"></script>
+<script src="/dist/calc-pages.js"></script>
+<script src="/dist/category-page.js"></script>
+<script src="/dist/app.js"></script>
 </body>
 </html>

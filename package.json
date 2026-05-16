@@ -1,0 +1,13 @@
+{
+  "name": "granite-calculator",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "build": "node build.js",
+    "dev": "node build.js --watch",
+    "serve": "npx serve -s ."
+  },
+  "devDependencies": {
+    "esbuild": "^0.21.0"
+  }
+}

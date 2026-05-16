@@ -4,11 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Static single-page site: a collection of construction-material calculators (paint, concrete, drywall, tile, lumber, roofing, landscape) for homeowners. No build step — React 18, ReactDOM, and `@babel/standalone` are loaded from `unpkg` CDN by `index.html`, which then loads each `src/*.jsx` file via `<script type="text/babel">` for in-browser JSX compilation.
+Static single-page site: a collection of construction-material calculators (paint, concrete, drywall, tile, lumber, roofing, landscape) for homeowners. React 18 (production UMD) is loaded from the `unpkg` CDN, plus 12 pre-transpiled `dist/*.js` scripts built from `src/*.jsx` via esbuild. `@babel/standalone` was removed from runtime in 2026-05 — it cost ~1 MB on download and ~3 s of main-thread parsing on slow devices. JSX now lives only in source; the browser only sees plain JS.
 
 Production domain: `granitecalculator.com`. Used in `index.html` (canonical, og:url, JSON-LD url + email), `sitemap.xml` (every entry), `robots.txt` (sitemap pointer), and `src/layout.jsx` (footer mailto). Keep these in sync if it ever changes.
 
-GitHub repo: `https://github.com/zoobrik/granite-calculator`. Hosted on Cloudflare Pages — auto-deploys every push to `main`. Cloudflare's GitHub OAuth occasionally drops; if a push doesn't trigger a build, reconnect via Pages project → Settings → Builds & deployments → Source → Reconnect, then push another commit. Direct upload via `wrangler pages deploy . --project-name=granite-calculator` works as a fallback (needs `wrangler login` first).
+GitHub repo: `https://github.com/zoobrik/granite-calculator`. Hosted on Cloudflare Pages — auto-deploys every push to `main`. Cloudflare's GitHub OAuth occasionally drops; if a push doesn't trigger a build, reconnect via Pages project → Settings → Builds & deployments → Source → Reconnect, then push another commit. Direct upload via `wrangler pages deploy . --project-name=granite-calculator` works as a fallback (needs `wrangler login` first AND a freshly-built `dist/`).
+
+Cloudflare Pages build settings (must be set in the project dashboard, not in the repo):
+- Build command: `npm install && npm run build`
+- Build output directory: leave empty (or `/`) — assets ship from project root, with `dist/` populated by the build
+- Root directory: leave empty
+- Framework preset: None
 
 ## Tests
 
@@ -24,38 +30,49 @@ All three transpile JSX with `@babel/core` (install via `cd /tmp/parsechk && npm
 
 Run all three before committing any change to a `compute()` function.
 
-## Running locally
+## Building and running locally
 
-No package manager, no build, no tests. The site needs to be served over HTTP — opening `index.html` via `file://` will not work (Babel-standalone fails CORS when fetching `src/*.jsx` from the filesystem).
-
-The router uses HTML5 history mode, so the dev server must fall back to `index.html` for unknown paths. The simplest option:
+The site needs `dist/*.js` populated before it will run — those are gitignored, regenerated on every push by Cloudflare Pages, and need to be regenerated manually for local dev.
 
 ```
-npx serve -s .          # the -s flag enables SPA fallback
+npm install              # one-time, installs esbuild
+npm run build            # transpile src/*.jsx → dist/*.js
+npm run dev              # same, plus watch src/ for changes
+npm run serve            # alias for `npx serve -s .`
 ```
 
-then open `http://localhost:3000`. Editing any `.jsx` or `styles.css` file is picked up on browser reload.
+Typical local-dev loop: `npm run dev` in one terminal, `npm run serve` in another, browser refresh after each save.
 
-`python3 -m http.server` will also boot the site, but it returns a real 404 for any deep link like `/c/paint/wall-paint` — you can only open the homepage and navigate from there.
+The router uses HTML5 history mode, so the dev server must fall back to `index.html` for unknown paths. `npx serve -s .` enables that with the `-s` flag. `python3 -m http.server` does NOT — it returns a real 404 for deep links like `/c/paint/wall-paint`.
+
+Opening `index.html` via `file://` will not work (browsers block fetching `dist/*.js` and `styles.css` from the filesystem in many cases, and the script load order races with the bootstrap).
+
+### Build details
+
+`build.js` runs `esbuild.transform` on each `src/*.jsx` with `loader: 'jsx'`, `jsxFactory: 'React.createElement'`, `minify: true`, then wraps the output in an IIFE so each file's top-level `let`/`const` stay isolated. Without that wrap, two files declaring `const useCallback = ...` would collide at the shared classic-script lexical record and the second script would throw `Identifier 'useCallback' has already been declared`. Globals each file publishes (`window.Icons`, `window.Calcs`, etc.) still escape to the global object via direct `window.X = ...` assignment.
+
+Output goes to `dist/`. That folder is gitignored and is regenerated on every Cloudflare Pages deploy via the project's build command (`npm install && npm run build`). If you switch hosts, replicate that build command — the site will not function with `dist/` missing.
 
 ## Architecture
 
-Everything is wired through globals on `window` because Babel-standalone gives every `<script>` its own module scope. The load order in `index.html` is the dependency order — do not reorder without checking which globals each file consumes.
+Everything is wired through globals on `window` because the build wraps each file in its own IIFE — that preserves the per-script scope isolation Babel-standalone gave us at runtime. The load order in `index.html` is the dependency order; do not reorder without checking which globals each file consumes.
 
-Load order and what each file publishes:
+Load order and what each file publishes (source in `src/*.jsx`, served from `dist/*.js`):
 
-1. `src/icons.jsx` → `window.Icons` (SVG icon set used everywhere)
-2. `src/viz.jsx` → `window.CalcViz` (per-calculator card visualization SVGs, keyed by slug)
-3. `src/data.jsx` → `window.Data = { categories, calculators, homepageBlurb }` — the source of truth for what calculators exist, their slugs, category, popularity, and homepage copy
-4. `src/primitives.jsx` → `window.Primitives` (`NumberInput`, `PillToggle`, `Slider`, `AnimatedNumber`, `useTheme`, `useLocalStorage`, `useCountUp`, `useToast`, `fmt`) and `window.SEO` (`setMeta`, `clearJsonLd`)
-5. `src/layout.jsx` → `window.Layout = { Header, Footer }`
-6. `src/homepage.jsx` → `window.Homepage`
-7. `src/calculators.jsx` → defines `window.Calcs` with the first batch of calculator definitions (paint, concrete, drywall)
-8. `src/more-calculators.jsx` → `Object.assign(window.Calcs, { ... })` — tile, roof pitch, board feet, mulch, stair stringer, gravel, square footage
-9. `src/extra-calculators.jsx` → `Object.assign(window.Calcs, { ... })` — footing/pier, drywall finishing, grout & thinset, shingle bundles, deck boards, sod, trim & ceiling paint
-10. `src/calc-pages.jsx` → `window.CalcPage` (generic per-calculator page shell)
-11. `src/category-page.jsx` → `window.CategoryPage`, `window.NotFoundPage`
-12. `src/app.jsx` → mounts `<App>` with HTML5 history routing
+1. `icons` → `window.Icons` (SVG icon set used everywhere)
+2. `viz` → `window.CalcViz` (per-calculator card visualization SVGs, keyed by slug)
+3. `data` → `window.Data = { categories, calculators, homepageBlurb }` — the source of truth for what calculators exist, their slugs, category, popularity, and homepage copy
+4. `primitives` → `window.Primitives` (`NumberInput`, `PillToggle`, `Slider`, `AnimatedNumber`, `useTheme`, `useLocalStorage`, `useCountUp`, `useToast`, `fmt`) and `window.SEO` (`setMeta`, `clearJsonLd`)
+5. `layout` → `window.Layout = { Header, Footer }`
+6. `homepage` → `window.Homepage`
+7. `calculators` → defines `window.Calcs` with the first batch (paint, concrete, drywall)
+8. `more-calculators` → `Object.assign(window.Calcs, { ... })` — tile, roof pitch, board feet, mulch, stair stringer, gravel, square footage
+9. `extra-calculators` → `Object.assign(window.Calcs, { ... })` — footing/pier, drywall finishing, grout & thinset, shingle bundles, deck boards, sod, trim & ceiling paint
+10. `calc-pages` → `window.CalcPage` (generic per-calculator page shell)
+11. `category-page` → `window.CategoryPage`, `window.NotFoundPage`
+12. `app` → mounts `<App>` with HTML5 history routing
+
+Bare cross-file references (e.g. `<Icons.Plus/>` in primitives.jsx, where `Icons` was declared `const` in icons.jsx) work because each `window.X = X` assignment in a publisher file makes `X` discoverable as an unqualified global identifier in subsequent files. Don't change the publisher files to use locally-scoped names without exposing them on `window`.
 
 ### Routing
 

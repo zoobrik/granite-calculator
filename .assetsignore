@@ -2,12 +2,19 @@
 # SPA fallback is handled natively via wrangler.jsonc → assets.not_found_handling.
 # _redirects and 404.html are kept in the repo for portability to Pages / Netlify /
 # GitHub Pages but excluded from this deploy.
+#
+# Production loads /dist/*.js (built from src/*.jsx by `npm run build`).
+# src/ and tests/ stay out of the deploy — they're source material only.
 .git
 .git/**
 .gitignore
 .assetsignore
 node_modules
 node_modules/**
+src
+src/**
+tests
+tests/**
 audit
 audit/**
 screenshots
@@ -16,6 +23,9 @@ uploads
 uploads/**
 CLAUDE.md
 wrangler.jsonc
+build.js
+package.json
+package-lock.json
 _redirects
 404.html
 *.log

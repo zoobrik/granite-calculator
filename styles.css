@@ -473,7 +473,11 @@ input, textarea, select {
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--cat-accent);
+  /* Use neutral muted text for WCAG AA contrast on white. The cat-accent
+     pastel reads as low-contrast (e.g. #c3bdaf for drywall fails 4.5:1).
+     Category identity is still conveyed by the viz top-bar accent stripe
+     and the hover border color. */
+  color: var(--fg-muted);
   margin: 0 0 2px;
 }
 .calc-card::after {
