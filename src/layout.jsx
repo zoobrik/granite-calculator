@@ -49,42 +49,16 @@ function Header({ route, navigate, theme, setTheme }) {
   );
 }
 
-function Footer({ navigate }) {
-  const { categories } = window.Data;
+function Footer() {
   return (
     <footer className="footer">
       <div className="container">
-        <div className="footer-inner">
-          <div className="footer-brand">
-            <a href="/" className="brand" onClick={(e) => { e.preventDefault(); navigate('/'); }}>
-              <span className="brand-mark"><Icons.Logo/></span>
-              <span>Granite Calculator</span>
-            </a>
-            <p style={{ margin: 0 }}>
-              Free construction calculators built by people who actually swing a hammer.
-            </p>
-          </div>
-          <div>
-            <div className="footer-col-title">Categories</div>
-            {categories.slice(0, 4).map(c => (
-              <a key={c.slug} className="footer-link" href={`/category/${c.slug}`} onClick={(e) => { e.preventDefault(); navigate(`/category/${c.slug}`); }}>{c.name}</a>
-            ))}
-          </div>
-          <div>
-            <div className="footer-col-title">Popular</div>
-            <a className="footer-link" href="/c/paint/wall-paint" onClick={(e) => { e.preventDefault(); navigate('/c/paint/wall-paint'); }}>Wall paint</a>
-            <a className="footer-link" href="/c/concrete/concrete-slab" onClick={(e) => { e.preventDefault(); navigate('/c/concrete/concrete-slab'); }}>Concrete slab</a>
-            <a className="footer-link" href="/c/drywall/drywall-sheets" onClick={(e) => { e.preventDefault(); navigate('/c/drywall/drywall-sheets'); }}>Drywall sheets</a>
-            <a className="footer-link" href="/c/roofing/roof-pitch" onClick={(e) => { e.preventDefault(); navigate('/c/roofing/roof-pitch'); }}>Roof pitch</a>
-          </div>
-          <div>
-            <div className="footer-col-title">Project</div>
-            <a className="footer-link" href="mailto:hello@granitecalculator.com">Contact</a>
-          </div>
+        <div className="footer-disclaimer">
+          Estimates only. Verify with your supplier and local building department before ordering materials or starting work. Use at your own risk.
         </div>
         <div className="footer-bottom">
-          <div>© 2026 Granite Calculator. All numbers are estimates. Verify with local code.</div>
-          <div className="mono">v0.4.2 — built in Brooklyn</div>
+          <div>© 2026 Granite Calculator. All numbers are estimates.</div>
+          <div className="footer-attr">Powered by <span className="footer-attr-mark">WhiteCloud</span></div>
         </div>
       </div>
     </footer>

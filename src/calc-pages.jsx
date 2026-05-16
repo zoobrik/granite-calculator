@@ -240,9 +240,15 @@ function CalcPage({ calcSlug, navigate, showToast }) {
                 </div>
               ))}
             </div>
-            <p style={{ fontSize: 13.5, color: 'var(--fg-subtle)' }}>
-              Results are estimates. Verify quantities against your supplier's spec and local building code before ordering.
-            </p>
+            <div className="disclaimer">
+              <h3 className="disclaimer-title">Estimates only — verify before you spend money</h3>
+              <p>
+                These calculators give you a starting point, not a final answer. Results can differ from real-world requirements due to material variation, jobsite conditions, local code differences, or input errors. Sometimes the numbers are close; sometimes they are significantly off.
+              </p>
+              <p>
+                Always verify every number against your supplier's spec sheet and your local building department before ordering materials or starting work. Use at your own risk.
+              </p>
+            </div>
           </article>
         </div>
 
