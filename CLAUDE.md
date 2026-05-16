@@ -154,6 +154,20 @@ All styles live in `styles.css`. Theme is driven by `data-theme="light|dark"` on
 
 The calculator and category card grids (`.calc-grid`, `.cats`) intentionally use `grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr))` with separate borders on each card and gap-based spacing. Earlier versions used a "container background bleeds through 1px gaps" trick that left visible grey holes when the card count didn't divide evenly into the column count — don't reintroduce that pattern.
 
+`.calc-card-cat` (the per-card category label) uses `var(--fg-muted)`, not `var(--cat-accent)`. The pastel accents (paint `#d18a6c`, drywall `#c3bdaf`, etc.) fail WCAG AA contrast on the white card background; per-card colour identity is carried by the viz top stripe (`.calc-card-viz::after`), the viz background gradient, and the hover border.
+
+### Stylesheets and fonts in index.html
+
+Both `styles.css` and the Google Fonts CSS load via the **preload-and-swap** pattern (`<link rel="preload" as="style" onload="...rel='stylesheet'">`) so neither blocks first paint. Each is mirrored in `<noscript>` as a normal blocking link for users without JS. Don't revert these to plain `<link rel="stylesheet">` without measuring — PageSpeed flagged them as render-blocking.
+
+The Google Fonts URL only requests `Geist 400/500/600` + `Geist Mono 400/500`. If you reach for `font-weight: 300/700` or `Geist Mono 600` in CSS, also add the weight to the URL in `index.html`, otherwise the browser silently substitutes a fallback weight.
+
+### Footer and disclaimers
+
+Footer (`Footer` in `src/layout.jsx`) is intentionally minimal: a one-paragraph estimates-only disclaimer above a hairline, then `© 2026 Granite Calculator. All numbers are estimates.` on the left and `Powered by WhiteCloud` (with `WhiteCloud` larger and bolder) on the right. Do not reintroduce the old four-column nav block — the user explicitly stripped it. The header nav already covers categories.
+
+Each calculator page also renders a `.disclaimer` callout (in `src/calc-pages.jsx`'s "How this works" section) repeating the warning at higher emphasis. Both blocks exist deliberately — the user wants visitors to know the numbers can sometimes be significantly off and that they must verify before spending money.
+
 ### SEO
 
 Per-route SEO is wired through `window.SEO.setMeta({ description, canonical, jsonLd })` from `src/primitives.jsx`. It sets/replaces `<meta name="description">`, `<link rel="canonical">`, and a `<script id="route-jsonld" type="application/ld+json">` block in `<head>`.
@@ -177,4 +191,5 @@ Static SEO baseline lives in `index.html`: meta description, OpenGraph, Twitter 
 - The site has no About page by design — removed because the user prefers to keep the site focused on the calculators.
 - Don't change the math constants listed above without an industry source — the user previously caught a 10× error in grout density, a 4× error in drywall screw count, a 3.5× error in drywall mud, and a ~2× error in deck-board count from ignoring off-cut reuse. All four came from defaults that "looked reasonable" but weren't backed by manufacturer data.
 - Cloudflare's Workers Static Assets validator rejects the obvious `_redirects` SPA rule (`/*  /index.html  200`) as an "infinite loop" if you ever switch back to a Workers (not Pages) deploy. The repo carries `_redirects` for Pages/Netlify portability and `wrangler.jsonc` (with `assets.not_found_handling: "single-page-application"`) for Workers — keep both unless you commit to one host permanently.
-- Cloudflare Pages can keep serving an old build after a successful push if its GitHub OAuth has dropped silently. If the live `<head>` doesn't reflect a recent commit (verify with `curl -s https://granitecalculator.com/src/calculators.jsx | grep -A1 "Ceiling height"`), reconnect the git source and push another commit — "Retry deployment" replays the OLD commit and won't help.
+- Cloudflare Pages can keep serving an old build after a successful push if its GitHub OAuth has dropped silently. If the live site doesn't reflect a recent commit, verify what's actually deployed with `curl -s https://granitecalculator.com/dist/calculators.js | head -c 400` and compare against your local `dist/`. To recover: reconnect the git source in the Pages project, then push another commit — "Retry deployment" replays the OLD commit and won't help. (Note: `src/` is no longer served — `.assetsignore` excludes it from the deployed asset set.)
+- React + ReactDOM are loaded as `production.min.js` UMD builds. Don't switch back to `.development.js` for "easier debugging" — they're 10× larger and parse 10× slower. If you need React DevTools / dev warnings while debugging, do it in the browser locally via the React DevTools extension, which works against production builds too.
