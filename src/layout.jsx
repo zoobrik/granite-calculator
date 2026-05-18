@@ -58,7 +58,7 @@ function Footer() {
         </div>
         <div className="footer-bottom">
           <div>© 2026 Granite Calculator. All numbers are estimates.</div>
-          <div className="footer-attr">Powered by <span className="footer-attr-mark">WhiteCloud</span></div>
+          <div className="footer-attr">Built by <span className="footer-attr-mark">WhiteCloud</span></div>
         </div>
       </div>
     </footer>

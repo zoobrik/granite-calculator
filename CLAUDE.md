@@ -164,7 +164,7 @@ The Google Fonts URL only requests `Geist 400/500/600` + `Geist Mono 400/500`. I
 
 ### Footer and disclaimers
 
-Footer (`Footer` in `src/layout.jsx`) is intentionally minimal: a one-paragraph estimates-only disclaimer above a hairline, then `© 2026 Granite Calculator. All numbers are estimates.` on the left and `Powered by WhiteCloud` (with `WhiteCloud` larger and bolder) on the right. Do not reintroduce the old four-column nav block — the user explicitly stripped it. The header nav already covers categories.
+Footer (`Footer` in `src/layout.jsx`) is intentionally minimal: a one-paragraph estimates-only disclaimer above a hairline, then `© 2026 Granite Calculator. All numbers are estimates.` on the left and `Built by WhiteCloud` (with `WhiteCloud` larger and bolder) on the right. Do not reintroduce the old four-column nav block — the user explicitly stripped it. The header nav already covers categories.
 
 Each calculator page also renders a `.disclaimer` callout (in `src/calc-pages.jsx`'s "How this works" section) repeating the warning at higher emphasis. Both blocks exist deliberately — the user wants visitors to know the numbers can sometimes be significantly off and that they must verify before spending money.
 
