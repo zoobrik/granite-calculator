@@ -3,11 +3,8 @@
 // passed in as { state, setField, units }. The .compute function on each calc
 // is a pure function from state -> { primary, sub, breakdown } for the result panel.
 
-const { useState: useS, useMemo: useM } = React;
 const { NumberInput, PillToggle, Slider, fmt } = window.Primitives;
-
-// Helper conversions
-const toFeet = (v, isImp) => isImp ? v : (v || 0) * 3.28084;
+const { toFt: toFeet, convertDims, sm, liters, m: toMeters, SM_PER_SF, L_PER_GAL, M3_PER_FT3 } = window.Conv;
 
 // ============================================================
 // PAINT CALCULATOR
@@ -28,7 +25,7 @@ function PaintCalculator({ state, setField, units }) {
           <NumberInput value={length} onChange={(v) => setField('length', v)} unit={isImp ? 'ft' : 'm'} min={1} max={200}/>
           <NumberInput value={width} onChange={(v) => setField('width', v)} unit={isImp ? 'ft' : 'm'} min={1} max={200}/>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 6, fontSize: 11.5, color: 'var(--fg-subtle)' }}>
+        <div className="field-row-labels">
           <span>Length</span><span>Width</span>
         </div>
       </div>
@@ -137,24 +134,12 @@ PaintCalculator.compute = function paintCompute(state, units) {
 };
 PaintCalculator.convertState = function (state, from, to) {
   if (from === to) return state;
-  const m2ft = 3.28084, ft2m = 0.3048;
   const sfg2smL = 0.02455; // sf/gal → sm/L
-  if (from === 'imperial' && to === 'metric') {
-    return {
-      ...state,
-      length: +(state.length * ft2m).toFixed(2),
-      width:  +(state.width * ft2m).toFixed(2),
-      height: +(state.height * ft2m).toFixed(2),
-      coverage: +(state.coverage * sfg2smL).toFixed(1),
-    };
-  }
-  return {
-    ...state,
-    length: +(state.length * m2ft).toFixed(1),
-    width:  +(state.width * m2ft).toFixed(1),
-    height: +(state.height * m2ft).toFixed(1),
-    coverage: +(state.coverage / sfg2smL).toFixed(0),
-  };
+  const next = convertDims(state, ['length', 'width', 'height'], from, to);
+  next.coverage = from === 'imperial'
+    ? +(state.coverage * sfg2smL).toFixed(1)
+    : +(state.coverage / sfg2smL).toFixed(0);
+  return next;
 };
 
 // ============================================================
@@ -191,7 +176,7 @@ function ConcreteCalculator({ state, setField, units }) {
             <NumberInput value={length} onChange={(v) => setField('length', v)} unit={isImp ? 'ft' : 'm'} min={0.5} max={500}/>
             <NumberInput value={width} onChange={(v) => setField('width', v)} unit={isImp ? 'ft' : 'm'} min={0.5} max={500}/>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 6, fontSize: 11.5, color: 'var(--fg-subtle)' }}>
+          <div className="field-row-labels">
             <span>Length</span><span>Width</span>
           </div>
         </div>
@@ -211,7 +196,7 @@ function ConcreteCalculator({ state, setField, units }) {
             <NumberInput value={length} onChange={(v) => setField('length', v)} unit={isImp ? 'ft' : 'm'} min={0.5} max={500}/>
             <NumberInput value={width} onChange={(v) => setField('width', v)} unit={isImp ? 'ft' : 'm'} min={0.5} max={500}/>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 6, fontSize: 11.5, color: 'var(--fg-subtle)' }}>
+          <div className="field-row-labels">
             <span>Base</span><span>Height</span>
           </div>
         </div>
@@ -237,23 +222,11 @@ function ConcreteCalculator({ state, setField, units }) {
 
 ConcreteCalculator.convertState = function (state, from, to) {
   if (from === to) return state;
-  const m2ft = 3.28084, ft2m = 0.3048;
-  if (from === 'imperial' && to === 'metric') {
-    return {
-      ...state,
-      length: +(state.length * ft2m).toFixed(2),
-      width:  +(state.width * ft2m).toFixed(2),
-      diameter: +(state.diameter * ft2m).toFixed(2),
-      thickness: Math.round((state.thickness || 0) * 25.4 / 10) * 10,
-    };
-  }
-  return {
-    ...state,
-    length: +(state.length * m2ft).toFixed(1),
-    width:  +(state.width * m2ft).toFixed(1),
-    diameter: +(state.diameter * m2ft).toFixed(1),
-    thickness: +((state.thickness || 0) / 25.4).toFixed(1),
-  };
+  const next = convertDims(state, ['length', 'width', 'diameter'], from, to);
+  next.thickness = from === 'imperial'
+    ? Math.round((state.thickness || 0) * 25.4 / 10) * 10   // in → mm (10 mm steps)
+    : +((state.thickness || 0) / 25.4).toFixed(1);          // mm → in
+  return next;
 };
 
 ConcreteCalculator.compute = function concreteCompute(state, units) {
@@ -310,7 +283,7 @@ function DrywallCalculator({ state, setField, units }) {
           <NumberInput value={length} onChange={(v) => setField('length', v)} unit={isImp ? 'ft' : 'm'} min={1} max={200}/>
           <NumberInput value={width} onChange={(v) => setField('width', v)} unit={isImp ? 'ft' : 'm'} min={1} max={200}/>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 6, fontSize: 11.5, color: 'var(--fg-subtle)' }}>
+        <div className="field-row-labels">
           <span>Length</span><span>Width</span>
         </div>
       </div>
@@ -373,16 +346,7 @@ function DrywallCalculator({ state, setField, units }) {
 }
 
 DrywallCalculator.convertState = function (state, from, to) {
-  if (from === to) return state;
-  const m2ft = 3.28084, ft2m = 0.3048;
-  const k = from === 'imperial' && to === 'metric' ? ft2m : m2ft;
-  const dec = from === 'imperial' && to === 'metric' ? 2 : 1;
-  return {
-    ...state,
-    length: +(state.length * k).toFixed(dec),
-    width:  +(state.width * k).toFixed(dec),
-    height: +(state.height * k).toFixed(dec),
-  };
+  return convertDims(state, ['length', 'width', 'height'], from, to);
 };
 
 DrywallCalculator.compute = function drywallCompute(state, units) {
@@ -403,15 +367,11 @@ DrywallCalculator.compute = function drywallCompute(state, units) {
   const wallSfNet = Math.max(0, wallArea - openings);
   const screws = Math.ceil(wallSfNet * 1.0 + ceilingArea * 1.5);        // walls 1/sf @ 16" oc; ceilings 1.5/sf @ 12" oc
 
-  const sm = (sf) => sf * 0.092903;
-  const m = (lf) => lf * 0.3048;
-  const liters = (gal) => gal * 3.78541;
-
   return {
     primary: { value: sheets, decimals: 0, unit: sheetSize === '4x8' ? 'sheets (4×8)' : 'sheets (4×12)', label: 'Drywall needed' },
     sub: isImp
       ? `Covers ${fmt.int(sheetCoverArea)} sq ft with 10% waste. You'll also need ${mudGal} gal of joint compound and ${fmt.int(tapeLf)} lf of paper tape.`
-      : `Covers ${fmt.dec(sm(sheetCoverArea), 1)} m² with 10% waste. You'll also need ${fmt.dec(liters(mudGal), 1)} L of joint compound and ${fmt.dec(m(tapeLf), 1)} m of paper tape.`,
+      : `Covers ${fmt.dec(sm(sheetCoverArea), 1)} m² with 10% waste. You'll also need ${fmt.dec(liters(mudGal), 1)} L of joint compound and ${fmt.dec(toMeters(tapeLf), 1)} m of paper tape.`,
     breakdown: isImp ? [
       { label: 'Wall area',       value: `${fmt.int(wallArea)} sq ft` },
       { label: 'Ceiling',         value: ceiling ? `${fmt.int(ceilingArea)} sq ft` : 'Not included' },
@@ -424,7 +384,7 @@ DrywallCalculator.compute = function drywallCompute(state, units) {
       { label: 'Ceiling',         value: ceiling ? `${fmt.dec(sm(ceilingArea), 1)} m²` : 'Not included' },
       { label: 'Openings',        value: `−${fmt.dec(sm(openings), 1)} m²` },
       { label: 'Joint compound',  value: `${fmt.dec(liters(mudGal), 1)} L` },
-      { label: 'Paper tape',      value: `${fmt.dec(m(tapeLf), 1)} m` },
+      { label: 'Paper tape',      value: `${fmt.dec(toMeters(tapeLf), 1)} m` },
       { label: 'Drywall screws',  value: `~${fmt.int(screws)}` },
     ],
   };

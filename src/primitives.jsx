@@ -207,6 +207,37 @@ window.Primitives = {
   NumberInput, PillToggle, Slider,
 };
 
+// -- Unit conversion helpers ------------------------------------------------
+// Single source of truth for the conversion factors used across calculators.
+const FT_PER_M  = 3.28084;
+const M_PER_FT  = 0.3048;
+const SM_PER_SF = 0.092903;
+const M3_PER_FT3 = 0.0283168;
+const L_PER_GAL = 3.78541;
+const CM_PER_IN = 2.54;
+
+const Conv = {
+  FT_PER_M, M_PER_FT, SM_PER_SF, M3_PER_FT3, L_PER_GAL, CM_PER_IN,
+  toFt: (v, isImp) => isImp ? v : (v || 0) * FT_PER_M,
+  sm: (sf) => sf * SM_PER_SF,
+  m:  (lf) => lf * M_PER_FT,
+  liters: (gal) => gal * L_PER_GAL,
+  // Convert a set of dimensional fields (in ft/m) between systems and round.
+  // Used by every calc whose convertState only touches length-like fields.
+  convertDims(state, keys, from, to) {
+    if (from === to) return state;
+    const toMetric = from === 'imperial' && to === 'metric';
+    const k = toMetric ? M_PER_FT : FT_PER_M;
+    const dec = toMetric ? 2 : 1;
+    const out = { ...state };
+    for (const key of keys) {
+      if (state[key] != null) out[key] = +(state[key] * k).toFixed(dec);
+    }
+    return out;
+  },
+};
+window.Conv = Conv;
+
 // -- SEO helpers (dynamic <title>, <meta description>, canonical, JSON-LD) ---
 const SEO_JSON_LD_ID = 'route-jsonld';
 const SEO_DESC_ID = 'route-description';

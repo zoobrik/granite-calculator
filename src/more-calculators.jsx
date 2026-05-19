@@ -1,7 +1,6 @@
 // Remaining calculators: Tile, Roof Pitch, Board Feet, Mulch, Stair Stringer, Gravel, Square Footage
-const { useState: useS2 } = React;
-const { NumberInput: NI, PillToggle: PT, Slider: SL, fmt: F } = window.Primitives;
-const toFt = (v, isImp) => isImp ? v : (v || 0) * 3.28084;
+const { NumberInput, PillToggle, Slider, fmt } = window.Primitives;
+const { toFt, convertDims, sm: toSqM, SM_PER_SF, M3_PER_FT3 } = window.Conv;
 
 // ============================================================
 // TILE BOX CALCULATOR
@@ -14,22 +13,22 @@ function TileCalculator({ state, setField, units }) {
       <div className="field">
         <label className="field-label">Surface dimensions <span className="field-hint">{isImp ? 'feet' : 'meters'}</span></label>
         <div className="field-row">
-          <NI value={length} onChange={(v) => setField('length', v)} unit={isImp ? 'ft' : 'm'} min={0.5} max={200}/>
-          <NI value={width} onChange={(v) => setField('width', v)} unit={isImp ? 'ft' : 'm'} min={0.5} max={200}/>
+          <NumberInput value={length} onChange={(v) => setField('length', v)} unit={isImp ? 'ft' : 'm'} min={0.5} max={200}/>
+          <NumberInput value={width} onChange={(v) => setField('width', v)} unit={isImp ? 'ft' : 'm'} min={0.5} max={200}/>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 6, fontSize: 11.5, color: 'var(--fg-subtle)' }}>
+        <div className="field-row-labels">
           <span>Length</span><span>Width</span>
         </div>
       </div>
       <div className="field">
         <label className="field-label">Box coverage <span className="field-hint">sq ft per box</span></label>
-        <NI value={tilePerBox} onChange={(v) => setField('tilePerBox', v)} unit="sf/box" min={1} max={100}/>
+        <NumberInput value={tilePerBox} onChange={(v) => setField('tilePerBox', v)} unit="sf/box" min={1} max={100}/>
       </div>
       <div className="subsection">
         <h3 className="subsection-title">Layout</h3>
         <div className="field" style={{ marginTop: 0 }}>
           <label className="field-label">Pattern</label>
-          <PT
+          <PillToggle
             options={[
               { label: 'Straight', value: 'straight' },
               { label: 'Diagonal', value: 'diagonal' },
@@ -47,22 +46,14 @@ function TileCalculator({ state, setField, units }) {
         </div>
         <div className="field">
           <label className="field-label">Waste factor <span className="field-hint">accounts for cuts & breakage</span></label>
-          <SL value={waste} onChange={(v) => setField('waste', v)} min={5} max={30} step={1} format={v => `${v}%`}/>
+          <Slider value={waste} onChange={(v) => setField('waste', v)} min={5} max={30} step={1} format={v => `${v}%`}/>
         </div>
       </div>
     </>
   );
 }
 TileCalculator.convertState = function (state, from, to) {
-  if (from === to) return state;
-  const m2ft = 3.28084, ft2m = 0.3048;
-  const k = from === 'imperial' && to === 'metric' ? ft2m : m2ft;
-  const dec = from === 'imperial' && to === 'metric' ? 2 : 1;
-  return {
-    ...state,
-    length: +(state.length * k).toFixed(dec),
-    width:  +(state.width * k).toFixed(dec),
-  };
+  return convertDims(state, ['length', 'width'], from, to);
 };
 TileCalculator.compute = function (state, units) {
   const isImp = units === 'imperial';
@@ -76,20 +67,20 @@ TileCalculator.compute = function (state, units) {
   return {
     primary: { value: boxes, decimals: 0, unit: boxes === 1 ? 'box' : 'boxes', label: 'Order this many' },
     sub: isImp
-      ? `That's ${F.int(adjusted)} sq ft total with ${waste}% waste. Buy one extra box for future repairs from the same dye lot.`
-      : `That's ${F.dec(adjSm, 2)} m² total with ${waste}% waste. Buy one extra box for future repairs from the same dye lot.`,
+      ? `That's ${fmt.int(adjusted)} sq ft total with ${waste}% waste. Buy one extra box for future repairs from the same dye lot.`
+      : `That's ${fmt.dec(adjSm, 2)} m² total with ${waste}% waste. Buy one extra box for future repairs from the same dye lot.`,
     breakdown: isImp ? [
-      { label: 'Floor area',      value: `${F.dec(area, 1)} sq ft` },
-      { label: 'Metric area',     value: `${F.dec(sqM, 2)} m²` },
+      { label: 'Floor area',      value: `${fmt.dec(area, 1)} sq ft` },
+      { label: 'Metric area',     value: `${fmt.dec(sqM, 2)} m²` },
       { label: 'Waste factor',    value: `+${waste}%` },
-      { label: 'Total to cover',  value: `${F.int(adjusted)} sq ft` },
+      { label: 'Total to cover',  value: `${fmt.int(adjusted)} sq ft` },
       { label: 'Coverage / box',  value: `${tilePerBox} sq ft` },
     ] : [
-      { label: 'Floor area',      value: `${F.dec(sqM, 2)} m²` },
-      { label: 'Imperial area',   value: `${F.dec(area, 1)} sq ft` },
+      { label: 'Floor area',      value: `${fmt.dec(sqM, 2)} m²` },
+      { label: 'Imperial area',   value: `${fmt.dec(area, 1)} sq ft` },
       { label: 'Waste factor',    value: `+${waste}%` },
-      { label: 'Total to cover',  value: `${F.dec(adjSm, 2)} m²` },
-      { label: 'Coverage / box',  value: `${F.dec(boxSm, 2)} m²` },
+      { label: 'Total to cover',  value: `${fmt.dec(adjSm, 2)} m²` },
+      { label: 'Coverage / box',  value: `${fmt.dec(boxSm, 2)} m²` },
     ],
   };
 };
@@ -104,11 +95,11 @@ function RoofPitchCalculator({ state, setField, units }) {
     <>
       <div className="field">
         <label className="field-label">Rise <span className="field-hint">vertical height</span></label>
-        <NI value={rise} onChange={(v) => setField('rise', v)} unit={isImp ? 'in' : 'cm'} min={0} max={200}/>
+        <NumberInput value={rise} onChange={(v) => setField('rise', v)} unit={isImp ? 'in' : 'cm'} min={0} max={200}/>
       </div>
       <div className="field">
         <label className="field-label">Run <span className="field-hint">horizontal distance</span></label>
-        <NI value={run} onChange={(v) => setField('run', v)} unit={isImp ? 'in' : 'cm'} min={1} max={200}/>
+        <NumberInput value={run} onChange={(v) => setField('run', v)} unit={isImp ? 'in' : 'cm'} min={1} max={200}/>
       </div>
       <div className="field">
         <div style={{ position: 'relative', height: 160, background: 'var(--bg-subtle)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', display: 'grid', placeItems: 'center' }}>
@@ -136,7 +127,7 @@ function RoofPitchCalculator({ state, setField, units }) {
       </div>
       <div className="subsection">
         <h3 className="subsection-title">Quick presets</h3>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <div className="btn-row">
           {[[4,12,'Low'],[6,12,'Standard'],[9,12,'Steep'],[12,12,'45°']].map(([r, ru, label]) => (
             <button key={label} className="btn btn-secondary btn-sm" onClick={() => { setField('rise', r); setField('run', ru); }}>
               {r}/{ru} <span style={{ color: 'var(--fg-subtle)', marginLeft: 4 }}>{label}</span>
@@ -176,12 +167,12 @@ RoofPitchCalculator.compute = function (state) {
 
   return {
     primary: { value: pitchOver12, decimals: 2, unit: '/ 12', label: 'Pitch (rise / 12 in run)' },
-    sub: `That's ${F.dec(degrees, 1)}° of slope — ${category.toLowerCase()}. Roof surface area is ${F.dec(multiplier, 3)}× the building footprint.`,
+    sub: `That's ${fmt.dec(degrees, 1)}° of slope — ${category.toLowerCase()}. Roof surface area is ${fmt.dec(multiplier, 3)}× the building footprint.`,
     breakdown: [
-      { label: 'Pitch ratio',      value: `${F.dec(pitchOver12, 2)} / 12` },
-      { label: 'Angle (degrees)',  value: `${F.dec(degrees, 2)}°` },
-      { label: 'Slope (percent)',  value: `${F.dec(percent, 1)}%` },
-      { label: 'Area multiplier',  value: `×${F.dec(multiplier, 3)}` },
+      { label: 'Pitch ratio',      value: `${fmt.dec(pitchOver12, 2)} / 12` },
+      { label: 'Angle (degrees)',  value: `${fmt.dec(degrees, 2)}°` },
+      { label: 'Slope (percent)',  value: `${fmt.dec(percent, 1)}%` },
+      { label: 'Area multiplier',  value: `×${fmt.dec(multiplier, 3)}` },
       { label: 'Classification',   value: category },
     ],
   };
@@ -197,24 +188,24 @@ function BoardFeetCalculator({ state, setField, units }) {
       <div className="field">
         <label className="field-label">Board dimensions</label>
         <div className="field-row" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
-          <NI value={thickness} onChange={(v) => setField('thickness', v)} unit="in" min={0.25} max={12} step={0.25}/>
-          <NI value={width} onChange={(v) => setField('width', v)} unit="in" min={0.5} max={48} step={0.25}/>
+          <NumberInput value={thickness} onChange={(v) => setField('thickness', v)} unit="in" min={0.25} max={12} step={0.25}/>
+          <NumberInput value={width} onChange={(v) => setField('width', v)} unit="in" min={0.5} max={48} step={0.25}/>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 6, fontSize: 11.5, color: 'var(--fg-subtle)' }}>
+        <div className="field-row-labels">
           <span>Thickness</span><span>Width</span>
         </div>
       </div>
       <div className="field">
         <label className="field-label">Length</label>
-        <NI value={length} onChange={(v) => setField('length', v)} unit="ft" min={1} max={50}/>
+        <NumberInput value={length} onChange={(v) => setField('length', v)} unit="ft" min={1} max={50}/>
       </div>
       <div className="field">
         <label className="field-label">Quantity <span className="field-hint">number of identical boards</span></label>
-        <NI value={qty} onChange={(v) => setField('qty', v)} unit="ea" min={1} max={500}/>
+        <NumberInput value={qty} onChange={(v) => setField('qty', v)} unit="ea" min={1} max={500}/>
       </div>
       <div className="subsection">
         <h3 className="subsection-title">Common sizes</h3>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <div className="btn-row">
           {[
             { label: '1×4',  t: 1,    w: 4 },
             { label: '1×6',  t: 1,    w: 6 },
@@ -245,13 +236,13 @@ BoardFeetCalculator.compute = function (state) {
   const cuFt = (t * w * (l * 12)) / 1728;
   return {
     primary: { value: total, decimals: 2, unit: 'board feet', label: 'Total board feet' },
-    sub: `${q} board${q > 1 ? 's' : ''} of ${t}″ × ${w}″ × ${l}′ totals ${F.dec(total, 2)} bf. Hardwood is priced this way; softwood is usually priced per linear foot.`,
+    sub: `${q} board${q > 1 ? 's' : ''} of ${t}″ × ${w}″ × ${l}′ totals ${fmt.dec(total, 2)} bf. Hardwood is priced this way; softwood is usually priced per linear foot.`,
     breakdown: [
-      { label: 'Per board',     value: `${F.dec(bf, 3)} bf` },
+      { label: 'Per board',     value: `${fmt.dec(bf, 3)} bf` },
       { label: 'Quantity',      value: `${q}` },
-      { label: 'Total bf',      value: `${F.dec(total, 2)} bf` },
-      { label: 'Linear feet',   value: `${F.dec(linearFt, 1)} lf` },
-      { label: 'Cubic feet',    value: `${F.dec(cuFt * q, 2)} ft³` },
+      { label: 'Total bf',      value: `${fmt.dec(total, 2)} bf` },
+      { label: 'Linear feet',   value: `${fmt.dec(linearFt, 1)} lf` },
+      { label: 'Cubic feet',    value: `${fmt.dec(cuFt * q, 2)} ft³` },
     ],
   };
 };
@@ -282,16 +273,16 @@ function MulchCalculator({ state, setField, units }) {
       {shape === 'circle' ? (
         <div className="field">
           <label className="field-label">Diameter</label>
-          <NI value={diameter} onChange={(v) => setField('diameter', v)} unit={isImp ? 'ft' : 'm'} min={1} max={100}/>
+          <NumberInput value={diameter} onChange={(v) => setField('diameter', v)} unit={isImp ? 'ft' : 'm'} min={1} max={100}/>
         </div>
       ) : (
         <div className="field">
           <label className="field-label">Bed dimensions</label>
           <div className="field-row">
-            <NI value={length} onChange={(v) => setField('length', v)} unit={isImp ? 'ft' : 'm'} min={1} max={500}/>
-            <NI value={width} onChange={(v) => setField('width', v)} unit={isImp ? 'ft' : 'm'} min={1} max={500}/>
+            <NumberInput value={length} onChange={(v) => setField('length', v)} unit={isImp ? 'ft' : 'm'} min={1} max={500}/>
+            <NumberInput value={width} onChange={(v) => setField('width', v)} unit={isImp ? 'ft' : 'm'} min={1} max={500}/>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 6, fontSize: 11.5, color: 'var(--fg-subtle)' }}>
+          <div className="field-row-labels">
             <span>{shape === 'triangle' ? 'Base' : 'Length'}</span>
             <span>{shape === 'triangle' ? 'Height' : 'Width'}</span>
           </div>
@@ -299,7 +290,7 @@ function MulchCalculator({ state, setField, units }) {
       )}
       <div className="field">
         <label className="field-label">Depth <span className="field-hint">{isImp ? '3" recommended for mulch' : '8 cm recommended for mulch'}</span></label>
-        <SL
+        <Slider
           value={depth}
           onChange={(v) => setField('depth', v)}
           min={isImp ? 1 : 2}
@@ -313,18 +304,11 @@ function MulchCalculator({ state, setField, units }) {
 }
 MulchCalculator.convertState = function (state, from, to) {
   if (from === to) return state;
-  const m2ft = 3.28084, ft2m = 0.3048;
-  const k = from === 'imperial' && to === 'metric' ? ft2m : m2ft;
-  const dec = from === 'imperial' && to === 'metric' ? 2 : 1;
-  return {
-    ...state,
-    length: +(state.length * k).toFixed(dec),
-    width:  +(state.width * k).toFixed(dec),
-    diameter: +(state.diameter * k).toFixed(dec),
-    depth: from === 'imperial' && to === 'metric'
-      ? Math.max(2, Math.round((state.depth || 3) * 2.54))
-      : Math.max(1, +((state.depth || 8) / 2.54).toFixed(1)),
-  };
+  const next = convertDims(state, ['length', 'width', 'diameter'], from, to);
+  next.depth = from === 'imperial'
+    ? Math.max(2, Math.round((state.depth || 3) * 2.54))
+    : Math.max(1, +((state.depth || 8) / 2.54).toFixed(1));
+  return next;
 };
 MulchCalculator.compute = function (state, units) {
   const isImp = units === 'imperial';
@@ -346,16 +330,16 @@ MulchCalculator.compute = function (state, units) {
       ? `Or ${bags2} bags of standard 2 cu ft mulch. Bulk mulch is cheaper above 3 yards — most landscape suppliers will deliver for a flat fee.`
       : `Or ${bags50L} bags of standard 50 L mulch. Bulk mulch is cheaper above 2 m³ — most landscape suppliers will deliver for a flat fee.`,
     breakdown: isImp ? [
-      { label: 'Bed area',     value: `${F.dec(area, 1)} sq ft` },
+      { label: 'Bed area',     value: `${fmt.dec(area, 1)} sq ft` },
       { label: 'Depth',        value: `${depth}"` },
-      { label: 'Volume',       value: `${F.dec(cuFt, 2)} ft³` },
-      { label: 'Cubic yards',  value: `${F.dec(cuYd, 2)} yd³` },
+      { label: 'Volume',       value: `${fmt.dec(cuFt, 2)} ft³` },
+      { label: 'Cubic yards',  value: `${fmt.dec(cuYd, 2)} yd³` },
       { label: 'Bags (2 ft³)', value: `${bags2}` },
     ] : [
-      { label: 'Bed area',     value: `${F.dec(sqM, 2)} m²` },
+      { label: 'Bed area',     value: `${fmt.dec(sqM, 2)} m²` },
       { label: 'Depth',        value: `${depth} cm` },
-      { label: 'Volume',       value: `${F.dec(cuM, 3)} m³` },
-      { label: 'Cubic yards',  value: `${F.dec(cuYd, 2)} yd³` },
+      { label: 'Volume',       value: `${fmt.dec(cuM, 3)} m³` },
+      { label: 'Cubic yards',  value: `${fmt.dec(cuYd, 2)} yd³` },
       { label: 'Bags (50 L)',  value: `${bags50L}` },
     ],
   };
@@ -371,11 +355,11 @@ function StairStringerCalculator({ state, setField, units }) {
     <>
       <div className="field">
         <label className="field-label">Total rise <span className="field-hint">floor to floor</span></label>
-        <NI value={totalRise} onChange={(v) => setField('totalRise', v)} unit={isImp ? 'in' : 'cm'} min={4} max={300}/>
+        <NumberInput value={totalRise} onChange={(v) => setField('totalRise', v)} unit={isImp ? 'in' : 'cm'} min={4} max={300}/>
       </div>
       <div className="field">
         <label className="field-label">Target riser height <span className="field-hint">code max: 7.75"</span></label>
-        <SL value={riserHeight} onChange={(v) => setField('riserHeight', v)} min={5} max={8} step={0.125} format={v => `${v}"`}/>
+        <Slider value={riserHeight} onChange={(v) => setField('riserHeight', v)} min={5} max={8} step={0.125} format={v => `${v}"`}/>
       </div>
       <div className="subsection">
         <h3 className="subsection-title">Code reference</h3>
@@ -402,21 +386,21 @@ StairStringerCalculator.compute = function (state) {
   const exceedsCode = actualRiser > 7.75;
   const tooShort = actualRiser < 4 && rise > 0;
   const codeNote = exceedsCode
-    ? ` ⚠ Actual riser ${F.dec(actualRiser, 2)}″ exceeds the 7.75″ IRC max. Lower your target riser height to add a step.`
+    ? ` ⚠ Actual riser ${fmt.dec(actualRiser, 2)}″ exceeds the 7.75″ IRC max. Lower your target riser height to add a step.`
     : tooShort
-    ? ` ⚠ Actual riser ${F.dec(actualRiser, 2)}″ is below 4″ — most codes require at least 4″. Raise your target.`
+    ? ` ⚠ Actual riser ${fmt.dec(actualRiser, 2)}″ is below 4″ — most codes require at least 4″. Raise your target.`
     : '';
 
   return {
     primary: { value: numRisers, decimals: 0, unit: 'risers', label: 'You need this many' },
-    sub: `${numRisers} risers at ${F.dec(actualRiser, 3)}″ and ${numTreads} treads at 10.5″ gives you a ${F.dec(angle, 1)}° staircase.${codeNote}`,
+    sub: `${numRisers} risers at ${fmt.dec(actualRiser, 3)}″ and ${numTreads} treads at 10.5″ gives you a ${fmt.dec(angle, 1)}° staircase.${codeNote}`,
     breakdown: [
       { label: 'Number of risers', value: `${numRisers}` },
-      { label: 'Actual riser height', value: `${F.dec(actualRiser, 3)}″${exceedsCode ? ' ⚠' : ''}` },
+      { label: 'Actual riser height', value: `${fmt.dec(actualRiser, 3)}″${exceedsCode ? ' ⚠' : ''}` },
       { label: 'Number of treads', value: `${numTreads}` },
-      { label: 'Total run', value: `${F.dec(totalRun, 1)}″` },
-      { label: 'Stringer length', value: `${F.dec(stringerLength, 1)}″` },
-      { label: 'Angle', value: `${F.dec(angle, 1)}°` },
+      { label: 'Total run', value: `${fmt.dec(totalRun, 1)}″` },
+      { label: 'Stringer length', value: `${fmt.dec(stringerLength, 1)}″` },
+      { label: 'Angle', value: `${fmt.dec(angle, 1)}°` },
     ],
   };
 };
@@ -432,16 +416,16 @@ function GravelCalculator({ state, setField, units }) {
       <div className="field">
         <label className="field-label">Area dimensions</label>
         <div className="field-row">
-          <NI value={length} onChange={(v) => setField('length', v)} unit={isImp ? 'ft' : 'm'} min={1} max={500}/>
-          <NI value={width} onChange={(v) => setField('width', v)} unit={isImp ? 'ft' : 'm'} min={1} max={500}/>
+          <NumberInput value={length} onChange={(v) => setField('length', v)} unit={isImp ? 'ft' : 'm'} min={1} max={500}/>
+          <NumberInput value={width} onChange={(v) => setField('width', v)} unit={isImp ? 'ft' : 'm'} min={1} max={500}/>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 6, fontSize: 11.5, color: 'var(--fg-subtle)' }}>
+        <div className="field-row-labels">
           <span>Length</span><span>Width</span>
         </div>
       </div>
       <div className="field">
         <label className="field-label">Depth</label>
-        <SL
+        <Slider
           value={depth}
           onChange={(v) => setField('depth', v)}
           min={isImp ? 1 : 2}
@@ -452,7 +436,7 @@ function GravelCalculator({ state, setField, units }) {
       </div>
       <div className="field">
         <label className="field-label">Gravel type</label>
-        <PT
+        <PillToggle
           options={[
             { label: 'Pea', value: 'pea' },
             { label: 'Crushed', value: 'crushed' },
@@ -467,17 +451,11 @@ function GravelCalculator({ state, setField, units }) {
 }
 GravelCalculator.convertState = function (state, from, to) {
   if (from === to) return state;
-  const m2ft = 3.28084, ft2m = 0.3048;
-  const k = from === 'imperial' && to === 'metric' ? ft2m : m2ft;
-  const dec = from === 'imperial' && to === 'metric' ? 2 : 1;
-  return {
-    ...state,
-    length: +(state.length * k).toFixed(dec),
-    width:  +(state.width * k).toFixed(dec),
-    depth: from === 'imperial' && to === 'metric'
-      ? Math.max(2, Math.round((state.depth || 4) * 2.54))
-      : Math.max(1, +((state.depth || 10) / 2.54).toFixed(1)),
-  };
+  const next = convertDims(state, ['length', 'width'], from, to);
+  next.depth = from === 'imperial'
+    ? Math.max(2, Math.round((state.depth || 4) * 2.54))
+    : Math.max(1, +((state.depth || 10) / 2.54).toFixed(1));
+  return next;
 };
 GravelCalculator.compute = function (state, units) {
   const isImp = units === 'imperial';
@@ -495,19 +473,19 @@ GravelCalculator.compute = function (state, units) {
   return {
     primary: { value: isImp ? cuYd : cuM, decimals: isImp ? 2 : 3, unit: isImp ? 'cubic yards' : 'm³', label: 'Gravel volume' },
     sub: isImp
-      ? `That's about ${F.dec(tons, 2)} tons of ${gravelType} gravel. Most yards deliver by the ton — round up by 10% for spreading and settling.`
-      : `That's about ${F.dec(tonnes, 2)} tonnes of ${gravelType} gravel. Most yards deliver by weight — round up by 10% for spreading and settling.`,
+      ? `That's about ${fmt.dec(tons, 2)} tons of ${gravelType} gravel. Most yards deliver by the ton — round up by 10% for spreading and settling.`
+      : `That's about ${fmt.dec(tonnes, 2)} tonnes of ${gravelType} gravel. Most yards deliver by weight — round up by 10% for spreading and settling.`,
     breakdown: isImp ? [
-      { label: 'Surface area',   value: `${F.dec(area, 1)} sq ft` },
+      { label: 'Surface area',   value: `${fmt.dec(area, 1)} sq ft` },
       { label: 'Depth',          value: `${depth}"` },
-      { label: 'Volume',         value: `${F.dec(cuFt, 2)} ft³` },
-      { label: 'Cubic yards',    value: `${F.dec(cuYd, 2)} yd³` },
-      { label: 'Estimated tons', value: `${F.dec(tons, 2)} tons` },
+      { label: 'Volume',         value: `${fmt.dec(cuFt, 2)} ft³` },
+      { label: 'Cubic yards',    value: `${fmt.dec(cuYd, 2)} yd³` },
+      { label: 'Estimated tons', value: `${fmt.dec(tons, 2)} tons` },
     ] : [
-      { label: 'Surface area',     value: `${F.dec(sqM, 2)} m²` },
+      { label: 'Surface area',     value: `${fmt.dec(sqM, 2)} m²` },
       { label: 'Depth',            value: `${depth} cm` },
-      { label: 'Volume',           value: `${F.dec(cuM, 3)} m³` },
-      { label: 'Estimated tonnes', value: `${F.dec(tonnes, 2)} t` },
+      { label: 'Volume',           value: `${fmt.dec(cuM, 3)} m³` },
+      { label: 'Estimated tonnes', value: `${fmt.dec(tonnes, 2)} t` },
     ],
   };
 };
@@ -534,7 +512,7 @@ function SquareFootageCalculator({ state, setField, units }) {
     <>
       <div className="field" style={{ marginTop: 0 }}>
         <label className="field-label">Add a section <span className="field-hint">combine multiple shapes</span></label>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <div className="btn-row">
           <button className="btn btn-secondary btn-sm" onClick={() => addShape('rect')}>
             <Icons.Plus size={12}/> Rectangle
           </button>
@@ -564,11 +542,11 @@ function SquareFootageCalculator({ state, setField, units }) {
                   <button className="btn btn-ghost btn-sm" onClick={() => removeShape(s.id)} style={{ height: 24, padding: '0 8px', fontSize: 11.5 }}>Remove</button>
                 </div>
                 {s.type === 'circle' ? (
-                  <NI value={s.diameter} onChange={(v) => updateShape(s.id, 'diameter', v)} unit={isImp ? 'ft' : 'm'} min={0.5} max={500}/>
+                  <NumberInput value={s.diameter} onChange={(v) => updateShape(s.id, 'diameter', v)} unit={isImp ? 'ft' : 'm'} min={0.5} max={500}/>
                 ) : (
                   <div className="field-row">
-                    <NI value={s.length} onChange={(v) => updateShape(s.id, 'length', v)} unit={isImp ? 'ft' : 'm'} min={0.5} max={500}/>
-                    <NI value={s.width} onChange={(v) => updateShape(s.id, 'width', v)} unit={isImp ? 'ft' : 'm'} min={0.5} max={500}/>
+                    <NumberInput value={s.length} onChange={(v) => updateShape(s.id, 'length', v)} unit={isImp ? 'ft' : 'm'} min={0.5} max={500}/>
+                    <NumberInput value={s.width} onChange={(v) => updateShape(s.id, 'width', v)} unit={isImp ? 'ft' : 'm'} min={0.5} max={500}/>
                   </div>
                 )}
               </div>
@@ -581,17 +559,9 @@ function SquareFootageCalculator({ state, setField, units }) {
 }
 SquareFootageCalculator.convertState = function (state, from, to) {
   if (from === to) return state;
-  const m2ft = 3.28084, ft2m = 0.3048;
-  const k = from === 'imperial' && to === 'metric' ? ft2m : m2ft;
-  const dec = from === 'imperial' && to === 'metric' ? 2 : 1;
   return {
     ...state,
-    shapes: state.shapes.map(s => ({
-      ...s,
-      length: +(s.length * k).toFixed(dec),
-      width:  +(s.width * k).toFixed(dec),
-      diameter: +(s.diameter * k).toFixed(dec),
-    })),
+    shapes: state.shapes.map(s => convertDims(s, ['length', 'width', 'diameter'], from, to)),
   };
 };
 SquareFootageCalculator.compute = function (state, units) {
@@ -605,7 +575,7 @@ SquareFootageCalculator.compute = function (state, units) {
     else if (s.type === 'triangle') a = 0.5 * toFt(s.length, isImp) * toFt(s.width, isImp);
     else a = toFt(s.length, isImp) * toFt(s.width, isImp);
     total += a;
-    const display = isImp ? `${F.dec(a, 1)} sq ft` : `${F.dec(a * 0.092903, 2)} m²`;
+    const display = isImp ? `${fmt.dec(a, 1)} sq ft` : `${fmt.dec(a * 0.092903, 2)} m²`;
     rows.push({ label: `Section ${i + 1} (${s.type})`, value: display });
   });
   const sqM = total * 0.092903;
@@ -616,11 +586,11 @@ SquareFootageCalculator.compute = function (state, units) {
     sub: shapes.length === 0
       ? 'Add sections above to compute total area.'
       : isImp
-      ? `Across ${shapes.length} section${shapes.length > 1 ? 's' : ''} — that's ${F.dec(sqM, 1)} m² or ${F.dec(acres, 4)} acres.`
-      : `Across ${shapes.length} section${shapes.length > 1 ? 's' : ''} — that's ${F.dec(total, 0)} sq ft or ${F.dec(hectares, 4)} hectares.`,
+      ? `Across ${shapes.length} section${shapes.length > 1 ? 's' : ''} — that's ${fmt.dec(sqM, 1)} m² or ${fmt.dec(acres, 4)} acres.`
+      : `Across ${shapes.length} section${shapes.length > 1 ? 's' : ''} — that's ${fmt.dec(total, 0)} sq ft or ${fmt.dec(hectares, 4)} hectares.`,
     breakdown: rows.length === 0
       ? [{ label: 'No sections yet', value: '—' }]
-      : [...rows, { label: 'Total', value: isImp ? `${F.dec(total, 1)} sq ft` : `${F.dec(sqM, 2)} m²` }],
+      : [...rows, { label: 'Total', value: isImp ? `${fmt.dec(total, 1)} sq ft` : `${fmt.dec(sqM, 2)} m²` }],
   };
 };
 

@@ -1,8 +1,8 @@
 // Additional calculators to fill out thin categories.
 // Concrete: footing/pier ▸ Drywall: finishing materials ▸ Tile: grout & thinset
 // Roofing: shingle bundles ▸ Lumber: deck boards ▸ Landscape: sod ▸ Paint: trim & ceiling
-const { NumberInput: XNI, PillToggle: XPT, Slider: XSL, fmt: XF } = window.Primitives;
-const toFt3 = (v, isImp) => isImp ? v : (v || 0) * 3.28084;
+const { NumberInput, PillToggle, Slider, fmt } = window.Primitives;
+const { toFt: toFt3, convertDims, sm, m: toMeters, liters, L_PER_GAL } = window.Conv;
 
 // ============================================================
 // FOOTING & PIER — concrete pier or rectangular footing
@@ -27,7 +27,7 @@ function FootingPierCalculator({ state, setField, units }) {
       {type === 'tube' ? (
         <div className="field">
           <label className="field-label">Diameter <span className="field-hint">{isImp ? 'inches' : 'cm'}</span></label>
-          <XNI
+          <NumberInput
             value={diameter}
             onChange={(v) => setField('diameter', v)}
             unit={isImp ? 'in' : 'cm'}
@@ -40,10 +40,10 @@ function FootingPierCalculator({ state, setField, units }) {
         <div className="field">
           <label className="field-label">Footprint <span className="field-hint">{isImp ? 'feet' : 'meters'}</span></label>
           <div className="field-row">
-            <XNI value={length} onChange={(v) => setField('length', v)} unit={isImp ? 'ft' : 'm'} min={0.5} max={50}/>
-            <XNI value={width} onChange={(v) => setField('width', v)} unit={isImp ? 'ft' : 'm'} min={0.5} max={50}/>
+            <NumberInput value={length} onChange={(v) => setField('length', v)} unit={isImp ? 'ft' : 'm'} min={0.5} max={50}/>
+            <NumberInput value={width} onChange={(v) => setField('width', v)} unit={isImp ? 'ft' : 'm'} min={0.5} max={50}/>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 6, fontSize: 11.5, color: 'var(--fg-subtle)' }}>
+          <div className="field-row-labels">
             <span>Length</span><span>Width</span>
           </div>
         </div>
@@ -51,17 +51,17 @@ function FootingPierCalculator({ state, setField, units }) {
 
       <div className="field">
         <label className="field-label">Depth / height <span className="field-hint">below grade for footings</span></label>
-        <XNI value={height} onChange={(v) => setField('height', v)} unit={isImp ? 'ft' : 'm'} min={0.5} max={20}/>
+        <NumberInput value={height} onChange={(v) => setField('height', v)} unit={isImp ? 'ft' : 'm'} min={0.5} max={20}/>
       </div>
 
       <div className="field">
         <label className="field-label">Quantity <span className="field-hint">identical units</span></label>
-        <XNI value={qty} onChange={(v) => setField('qty', v)} unit="ea" min={1} max={200}/>
+        <NumberInput value={qty} onChange={(v) => setField('qty', v)} unit="ea" min={1} max={200}/>
       </div>
 
       <div className="subsection">
         <h3 className="subsection-title">Common sizes</h3>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <div className="btn-row">
           {[['8" deck pier', 'tube', 8, 4], ['10" pier', 'tube', 10, 4], ['12" pier', 'tube', 12, 4], ['16" pier', 'tube', 16, 4]].map(([label, t, d, h]) => (
             <button key={label} className="btn btn-secondary btn-sm" onClick={() => { setField('type', t); setField('diameter', d); setField('height', h); }}>{label}</button>
           ))}
@@ -72,21 +72,11 @@ function FootingPierCalculator({ state, setField, units }) {
 }
 FootingPierCalculator.convertState = function (s, from, to) {
   if (from === to) return s;
-  const m2ft = 3.28084, ft2m = 0.3048;
-  if (from === 'imperial' && to === 'metric') return {
-    ...s,
-    diameter: +((s.diameter || 0) * 2.54).toFixed(1),
-    length: +(s.length * ft2m).toFixed(2),
-    width: +(s.width * ft2m).toFixed(2),
-    height: +(s.height * ft2m).toFixed(2),
-  };
-  return {
-    ...s,
-    diameter: +((s.diameter || 0) / 2.54).toFixed(1),
-    length: +(s.length * m2ft).toFixed(1),
-    width: +(s.width * m2ft).toFixed(1),
-    height: +(s.height * m2ft).toFixed(1),
-  };
+  const next = convertDims(s, ['length', 'width', 'height'], from, to);
+  next.diameter = from === 'imperial'
+    ? +((s.diameter || 0) * 2.54).toFixed(1)   // in → cm
+    : +((s.diameter || 0) / 2.54).toFixed(1);  // cm → in
+  return next;
 };
 FootingPierCalculator.compute = function (state, units) {
   const isImp = units === 'imperial';
@@ -115,17 +105,17 @@ FootingPierCalculator.compute = function (state, units) {
       label: 'Concrete needed',
     },
     sub: isImp
-      ? `${qty} ${noun}${qty > 1 ? 's' : ''} at ${XF.dec(cuFtEach, 2)} ft³ each. Most pours under ½ yd³ are cheapest with bagged concrete.`
-      : `${qty} ${noun}${qty > 1 ? 's' : ''} at ${XF.dec(cuMEach, 3)} m³ each. Most pours under 0.4 m³ are cheapest with bagged concrete.`,
+      ? `${qty} ${noun}${qty > 1 ? 's' : ''} at ${fmt.dec(cuFtEach, 2)} ft³ each. Most pours under ½ yd³ are cheapest with bagged concrete.`
+      : `${qty} ${noun}${qty > 1 ? 's' : ''} at ${fmt.dec(cuMEach, 3)} m³ each. Most pours under 0.4 m³ are cheapest with bagged concrete.`,
     breakdown: isImp ? [
-      { label: 'Volume per unit', value: `${XF.dec(cuFtEach, 2)} ft³` },
-      { label: 'Total volume',    value: `${XF.dec(cuFt, 2)} ft³` },
-      { label: 'Cubic yards',     value: `${XF.dec(cuYd, 3)} yd³` },
+      { label: 'Volume per unit', value: `${fmt.dec(cuFtEach, 2)} ft³` },
+      { label: 'Total volume',    value: `${fmt.dec(cuFt, 2)} ft³` },
+      { label: 'Cubic yards',     value: `${fmt.dec(cuYd, 3)} yd³` },
       { label: '60 lb bags',      value: `${bags60} bags` },
       { label: '80 lb bags',      value: `${bags80} bags` },
     ] : [
-      { label: 'Volume per unit',     value: `${XF.dec(cuMEach, 3)} m³` },
-      { label: 'Total volume',        value: `${XF.dec(cuM, 3)} m³` },
+      { label: 'Volume per unit',     value: `${fmt.dec(cuMEach, 3)} m³` },
+      { label: 'Total volume',        value: `${fmt.dec(cuM, 3)} m³` },
       { label: '60 lb (27 kg) bags',  value: `${bags60} bags` },
       { label: '80 lb (36 kg) bags',  value: `${bags80} bags` },
     ],
@@ -142,11 +132,11 @@ function DrywallFinishingCalculator({ state, setField, units }) {
     <>
       <div className="field">
         <label className="field-label">Drywall area <span className="field-hint">{isImp ? 'square feet installed' : 'square meters'}</span></label>
-        <XNI value={area} onChange={(v) => setField('area', v)} unit={isImp ? 'sf' : 'm²'} min={1} max={isImp ? 50000 : 5000}/>
+        <NumberInput value={area} onChange={(v) => setField('area', v)} unit={isImp ? 'sf' : 'm²'} min={1} max={isImp ? 50000 : 5000}/>
       </div>
       <div className="field">
         <label className="field-label">Joint complexity</label>
-        <XPT
+        <PillToggle
           options={[
             { label: 'Light', value: 'light' },
             { label: 'Standard', value: 'standard' },
@@ -163,7 +153,7 @@ function DrywallFinishingCalculator({ state, setField, units }) {
       </div>
       <div className="subsection">
         <h3 className="subsection-title">Quick rooms</h3>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <div className="btn-row">
           {[['Closet', 200], ['Bedroom', 600], ['Living room', 1200], ['Basement', 2400], ['Whole floor', 5000]].map(([label, a]) => (
             <button key={label} className="btn btn-secondary btn-sm" onClick={() => setField('area', isImp ? a : Math.round(a * 0.092903))}>{label}</button>
           ))}
@@ -192,14 +182,14 @@ DrywallFinishingCalculator.compute = function (state, units) {
   const screwLbs = Math.ceil(screws / 250 * 10) / 10;       // ~250 screws/lb for #6 × 1¼" coarse
   return {
     primary: { value: buckets, decimals: 0, unit: buckets === 1 ? 'bucket' : 'buckets', label: 'Joint compound (4.5 gal pre-mix)' },
-    sub: `${XF.dec(mudGal, 1)} gallons total, plus ${tapeRolls} roll${tapeRolls > 1 ? 's' : ''} of paper tape and about ${XF.dec(screwLbs, 1)} lbs of screws.`,
+    sub: `${fmt.dec(mudGal, 1)} gallons total, plus ${tapeRolls} roll${tapeRolls > 1 ? 's' : ''} of paper tape and about ${fmt.dec(screwLbs, 1)} lbs of screws.`,
     breakdown: [
-      { label: 'Drywall area',     value: `${XF.int(sf)} sq ft` },
-      { label: 'Joint compound',   value: `${XF.dec(mudGal, 1)} gal` },
+      { label: 'Drywall area',     value: `${fmt.int(sf)} sq ft` },
+      { label: 'Joint compound',   value: `${fmt.dec(mudGal, 1)} gal` },
       { label: 'Pre-mix buckets',  value: `${buckets}` },
-      { label: 'Paper tape',       value: `${XF.int(tapeLf)} lf` },
+      { label: 'Paper tape',       value: `${fmt.int(tapeLf)} lf` },
       { label: 'Tape rolls (250lf)', value: `${tapeRolls}` },
-      { label: 'Screws (~)',       value: `${XF.int(screws)} (${XF.dec(screwLbs, 1)} lb)` },
+      { label: 'Screws (~)',       value: `${fmt.int(screws)} (${fmt.dec(screwLbs, 1)} lb)` },
     ],
   };
 };
@@ -214,11 +204,11 @@ function GroutThinsetCalculator({ state, setField, units }) {
     <>
       <div className="field">
         <label className="field-label">Tile area <span className="field-hint">{isImp ? 'square feet' : 'square meters'}</span></label>
-        <XNI value={area} onChange={(v) => setField('area', v)} unit={isImp ? 'sf' : 'm²'} min={1} max={10000}/>
+        <NumberInput value={area} onChange={(v) => setField('area', v)} unit={isImp ? 'sf' : 'm²'} min={1} max={10000}/>
       </div>
       <div className="field">
         <label className="field-label">Tile size</label>
-        <XPT
+        <PillToggle
           options={[
             { label: '4"', value: 4 },
             { label: '6"', value: 6 },
@@ -232,11 +222,11 @@ function GroutThinsetCalculator({ state, setField, units }) {
       </div>
       <div className="field">
         <label className="field-label">Grout joint width</label>
-        <XSL value={jointWidth} onChange={(v) => setField('jointWidth', v)} min={1/16} max={1/2} step={1/16} format={v => `${(v * 16).toFixed(0)}/16"`}/>
+        <Slider value={jointWidth} onChange={(v) => setField('jointWidth', v)} min={1/16} max={1/2} step={1/16} format={v => `${(v * 16).toFixed(0)}/16"`}/>
       </div>
       <div className="field">
         <label className="field-label">Tile thickness <span className="field-hint">affects thinset coverage</span></label>
-        <XPT
+        <PillToggle
           options={[
             { label: 'Thin (≤ 3/8")', value: 'thin' },
             { label: 'Standard (1/2")', value: 'standard' },
@@ -271,12 +261,12 @@ GroutThinsetCalculator.compute = function (state) {
   const bagsThinset = Math.max(1, Math.ceil(sf * thickFactor * 1.10 / thinsetCoverage));
   return {
     primary: { value: bagsThinset, decimals: 0, unit: bagsThinset === 1 ? 'bag' : 'bags', label: 'Thinset (50 lb bags)' },
-    sub: `Plus ${bags25} bag${bags25 > 1 ? 's' : ''} of grout — ${XF.dec(totalLbs, 1)} lbs total for a ${(J * 16).toFixed(0)}/16" joint. Both numbers include a 10% safety margin.`,
+    sub: `Plus ${bags25} bag${bags25 > 1 ? 's' : ''} of grout — ${fmt.dec(totalLbs, 1)} lbs total for a ${(J * 16).toFixed(0)}/16" joint. Both numbers include a 10% safety margin.`,
     breakdown: [
-      { label: 'Tile area',            value: `${XF.int(sf)} sq ft` },
+      { label: 'Tile area',            value: `${fmt.int(sf)} sq ft` },
       { label: 'Tile size',            value: `${T}" × ${T}"` },
       { label: 'Joint width',          value: `${(J * 16).toFixed(0)}/16"` },
-      { label: 'Grout (dry, +10%)',    value: `${XF.dec(totalLbs, 1)} lbs` },
+      { label: 'Grout (dry, +10%)',    value: `${fmt.dec(totalLbs, 1)} lbs` },
       { label: 'Grout bags (25 lb)',   value: `${bags25}` },
       { label: 'Thinset bags (50 lb)', value: `${bagsThinset}` },
       { label: 'Thinset coverage',     value: `~${thinsetCoverage} sf/bag` },
@@ -295,16 +285,16 @@ function ShingleBundlesCalculator({ state, setField, units }) {
       <div className="field">
         <label className="field-label">Roof footprint <span className="field-hint">total area covered, viewed from above</span></label>
         <div className="field-row">
-          <XNI value={length} onChange={(v) => setField('length', v)} unit={isImp ? 'ft' : 'm'} min={5} max={500}/>
-          <XNI value={width} onChange={(v) => setField('width', v)} unit={isImp ? 'ft' : 'm'} min={5} max={500}/>
+          <NumberInput value={length} onChange={(v) => setField('length', v)} unit={isImp ? 'ft' : 'm'} min={5} max={500}/>
+          <NumberInput value={width} onChange={(v) => setField('width', v)} unit={isImp ? 'ft' : 'm'} min={5} max={500}/>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 6, fontSize: 11.5, color: 'var(--fg-subtle)' }}>
+        <div className="field-row-labels">
           <span>Length</span><span>Width</span>
         </div>
       </div>
       <div className="field">
         <label className="field-label">Roof pitch <span className="field-hint">rise over 12" run</span></label>
-        <XPT
+        <PillToggle
           options={[
             { label: '3/12', value: 3 },
             { label: '6/12', value: 6 },
@@ -318,26 +308,17 @@ function ShingleBundlesCalculator({ state, setField, units }) {
       </div>
       <div className="field">
         <label className="field-label">Ridge & hip length <span className="field-hint">for cap shingles</span></label>
-        <XNI value={ridgeLf} onChange={(v) => setField('ridgeLf', v)} unit={isImp ? 'lf' : 'm'} min={0} max={500}/>
+        <NumberInput value={ridgeLf} onChange={(v) => setField('ridgeLf', v)} unit={isImp ? 'lf' : 'm'} min={0} max={500}/>
       </div>
       <div className="field">
         <label className="field-label">Valleys</label>
-        <XNI value={valleys} onChange={(v) => setField('valleys', v)} unit="ea" min={0} max={20}/>
+        <NumberInput value={valleys} onChange={(v) => setField('valleys', v)} unit="ea" min={0} max={20}/>
       </div>
     </>
   );
 }
 ShingleBundlesCalculator.convertState = function (s, from, to) {
-  if (from === to) return s;
-  const m2ft = 3.28084, ft2m = 0.3048;
-  const k = from === 'imperial' && to === 'metric' ? ft2m : m2ft;
-  const dec = from === 'imperial' && to === 'metric' ? 2 : 1;
-  return {
-    ...s,
-    length: +(s.length * k).toFixed(dec),
-    width: +(s.width * k).toFixed(dec),
-    ridgeLf: +(s.ridgeLf * k).toFixed(dec),
-  };
+  return convertDims(s, ['length', 'width', 'ridgeLf'], from, to);
 };
 ShingleBundlesCalculator.compute = function (state, units) {
   const isImp = units === 'imperial';
@@ -354,27 +335,26 @@ ShingleBundlesCalculator.compute = function (state, units) {
   const ridgeLf = toFt3(state.ridgeLf, isImp);
   const capBundles = Math.ceil(ridgeLf / 33);                // ~33 lf per hip & ridge bundle
   const underlaymentRolls = Math.ceil(squares / 4);          // 4 squares per roll (synthetic)
-  const sm = (sf) => sf * 0.092903;
   return {
     primary: { value: bundles, decimals: 0, unit: bundles === 1 ? 'bundle' : 'bundles', label: 'Shingles (3-tab / architectural)' },
     sub: isImp
-      ? `That's ${XF.dec(squares, 1)} squares with ${(wastePct * 100).toFixed(0)}% waste. Plus ${capBundles} hip & ridge bundle${capBundles === 1 ? '' : 's'} and ${underlaymentRolls} roll${underlaymentRolls === 1 ? '' : 's'} of synthetic underlayment.`
-      : `That's ${XF.dec(sm(areaWithWaste), 1)} m² of roof to cover (${(wastePct * 100).toFixed(0)}% waste). Plus ${capBundles} hip & ridge bundle${capBundles === 1 ? '' : 's'} and ${underlaymentRolls} roll${underlaymentRolls === 1 ? '' : 's'} of synthetic underlayment.`,
+      ? `That's ${fmt.dec(squares, 1)} squares with ${(wastePct * 100).toFixed(0)}% waste. Plus ${capBundles} hip & ridge bundle${capBundles === 1 ? '' : 's'} and ${underlaymentRolls} roll${underlaymentRolls === 1 ? '' : 's'} of synthetic underlayment.`
+      : `That's ${fmt.dec(sm(areaWithWaste), 1)} m² of roof to cover (${(wastePct * 100).toFixed(0)}% waste). Plus ${capBundles} hip & ridge bundle${capBundles === 1 ? '' : 's'} and ${underlaymentRolls} roll${underlaymentRolls === 1 ? '' : 's'} of synthetic underlayment.`,
     breakdown: isImp ? [
-      { label: 'Footprint',         value: `${XF.int(footprint)} sq ft` },
-      { label: 'Pitch multiplier',  value: `×${XF.dec(mult, 3)}` },
-      { label: 'Roof surface',      value: `${XF.int(roofArea)} sq ft` },
-      { label: 'With waste',        value: `${XF.int(areaWithWaste)} sq ft` },
-      { label: 'Squares',           value: `${XF.dec(squares, 2)}` },
+      { label: 'Footprint',         value: `${fmt.int(footprint)} sq ft` },
+      { label: 'Pitch multiplier',  value: `×${fmt.dec(mult, 3)}` },
+      { label: 'Roof surface',      value: `${fmt.int(roofArea)} sq ft` },
+      { label: 'With waste',        value: `${fmt.int(areaWithWaste)} sq ft` },
+      { label: 'Squares',           value: `${fmt.dec(squares, 2)}` },
       { label: 'Shingle bundles',   value: `${bundles}` },
       { label: 'Hip & ridge',       value: `${capBundles} bundle${capBundles === 1 ? '' : 's'}` },
       { label: 'Underlayment rolls',value: `${underlaymentRolls}` },
     ] : [
-      { label: 'Footprint',         value: `${XF.dec(sm(footprint), 1)} m²` },
-      { label: 'Pitch multiplier',  value: `×${XF.dec(mult, 3)}` },
-      { label: 'Roof surface',      value: `${XF.dec(sm(roofArea), 1)} m²` },
-      { label: 'With waste',        value: `${XF.dec(sm(areaWithWaste), 1)} m²` },
-      { label: 'Squares (100 sf)',  value: `${XF.dec(squares, 2)}` },
+      { label: 'Footprint',         value: `${fmt.dec(sm(footprint), 1)} m²` },
+      { label: 'Pitch multiplier',  value: `×${fmt.dec(mult, 3)}` },
+      { label: 'Roof surface',      value: `${fmt.dec(sm(roofArea), 1)} m²` },
+      { label: 'With waste',        value: `${fmt.dec(sm(areaWithWaste), 1)} m²` },
+      { label: 'Squares (100 sf)',  value: `${fmt.dec(squares, 2)}` },
       { label: 'Shingle bundles',   value: `${bundles}` },
       { label: 'Hip & ridge',       value: `${capBundles} bundle${capBundles === 1 ? '' : 's'}` },
       { label: 'Underlayment rolls',value: `${underlaymentRolls}` },
@@ -392,16 +372,16 @@ function DeckBoardsCalculator({ state, setField, units }) {
       <div className="field">
         <label className="field-label">Deck dimensions <span className="field-hint">feet</span></label>
         <div className="field-row">
-          <XNI value={length} onChange={(v) => setField('length', v)} unit="ft" min={2} max={100}/>
-          <XNI value={width} onChange={(v) => setField('width', v)} unit="ft" min={2} max={100}/>
+          <NumberInput value={length} onChange={(v) => setField('length', v)} unit="ft" min={2} max={100}/>
+          <NumberInput value={width} onChange={(v) => setField('width', v)} unit="ft" min={2} max={100}/>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 6, fontSize: 11.5, color: 'var(--fg-subtle)' }}>
+        <div className="field-row-labels">
           <span>Length</span><span>Width</span>
         </div>
       </div>
       <div className="field">
         <label className="field-label">Board width</label>
-        <XPT
+        <PillToggle
           options={[
             { label: '5/4 × 6', value: 5.5 },
             { label: '2 × 4', value: 3.5 },
@@ -414,7 +394,7 @@ function DeckBoardsCalculator({ state, setField, units }) {
       </div>
       <div className="field">
         <label className="field-label">Board length <span className="field-hint">stock you'll order</span></label>
-        <XPT
+        <PillToggle
           options={[
             { label: '8\'', value: 8 },
             { label: '10\'', value: 10 },
@@ -427,7 +407,7 @@ function DeckBoardsCalculator({ state, setField, units }) {
       </div>
       <div className="field">
         <label className="field-label">Orientation <span className="field-hint">boards run...</span></label>
-        <XPT
+        <PillToggle
           options={[
             { label: 'Along length', value: 'length' },
             { label: 'Across width', value: 'width' },
@@ -438,7 +418,7 @@ function DeckBoardsCalculator({ state, setField, units }) {
       </div>
       <div className="field">
         <label className="field-label">Gap between boards</label>
-        <XSL value={gap} onChange={(v) => setField('gap', v)} min={0} max={0.5} step={1/16} format={v => v === 0 ? 'tight' : `${(v * 16).toFixed(0)}/16"`}/>
+        <Slider value={gap} onChange={(v) => setField('gap', v)} min={0} max={0.5} step={1/16} format={v => v === 0 ? 'tight' : `${(v * 16).toFixed(0)}/16"`}/>
       </div>
     </>
   );
@@ -473,15 +453,15 @@ DeckBoardsCalculator.compute = function (state) {
   const screws = rowsAcross * joists * 2;
   return {
     primary: { value: totalBoards, decimals: 0, unit: 'boards', label: `${bl}-ft deck boards` },
-    sub: `Covers ${XF.int(totalSf)} sq ft in ${rowsAcross} rows (${XF.int(totalLfNeeded)} lf needed). ${totalBoards} boards × ${bl} ft = ${XF.int(linearFt)} lf, including 10% waste for cuts and defects.`,
+    sub: `Covers ${fmt.int(totalSf)} sq ft in ${rowsAcross} rows (${fmt.int(totalLfNeeded)} lf needed). ${totalBoards} boards × ${bl} ft = ${fmt.int(linearFt)} lf, including 10% waste for cuts and defects.`,
     breakdown: [
-      { label: 'Deck area',         value: `${XF.int(totalSf)} sq ft` },
+      { label: 'Deck area',         value: `${fmt.int(totalSf)} sq ft` },
       { label: 'Rows across',       value: `${rowsAcross}` },
-      { label: 'Linear feet needed',value: `${XF.int(totalLfNeeded)} lf` },
+      { label: 'Linear feet needed',value: `${fmt.int(totalLfNeeded)} lf` },
       { label: 'Total boards',      value: `${totalBoards}` },
-      { label: 'Total linear feet', value: `${XF.int(linearFt)} lf` },
-      { label: 'Waste',             value: `${XF.dec(wastePct, 0)}%` },
-      { label: 'Deck screws (~)',   value: `${XF.int(screws)}` },
+      { label: 'Total linear feet', value: `${fmt.int(linearFt)} lf` },
+      { label: 'Waste',             value: `${fmt.dec(wastePct, 0)}%` },
+      { label: 'Deck screws (~)',   value: `${fmt.int(screws)}` },
     ],
   };
 };
@@ -497,16 +477,16 @@ function SodCalculator({ state, setField, units }) {
       <div className="field">
         <label className="field-label">Lawn dimensions</label>
         <div className="field-row">
-          <XNI value={length} onChange={(v) => setField('length', v)} unit={isImp ? 'ft' : 'm'} min={1} max={500}/>
-          <XNI value={width} onChange={(v) => setField('width', v)} unit={isImp ? 'ft' : 'm'} min={1} max={500}/>
+          <NumberInput value={length} onChange={(v) => setField('length', v)} unit={isImp ? 'ft' : 'm'} min={1} max={500}/>
+          <NumberInput value={width} onChange={(v) => setField('width', v)} unit={isImp ? 'ft' : 'm'} min={1} max={500}/>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 6, fontSize: 11.5, color: 'var(--fg-subtle)' }}>
+        <div className="field-row-labels">
           <span>Length</span><span>Width</span>
         </div>
       </div>
       <div className="field">
         <label className="field-label">Sod cut</label>
-        <XPT
+        <PillToggle
           options={[
             { label: 'Slab (2×5\')', value: 'slab' },
             { label: 'Roll (2×4\')', value: 'roll' },
@@ -525,11 +505,7 @@ function SodCalculator({ state, setField, units }) {
   );
 }
 SodCalculator.convertState = function (s, from, to) {
-  if (from === to) return s;
-  const m2ft = 3.28084, ft2m = 0.3048;
-  const k = from === 'imperial' && to === 'metric' ? ft2m : m2ft;
-  const dec = from === 'imperial' && to === 'metric' ? 2 : 1;
-  return { ...s, length: +(s.length * k).toFixed(dec), width: +(s.width * k).toFixed(dec) };
+  return convertDims(s, ['length', 'width'], from, to);
 };
 SodCalculator.compute = function (state, units) {
   const isImp = units === 'imperial';
@@ -545,15 +521,15 @@ SodCalculator.compute = function (state, units) {
     primary: { value: pallets, decimals: 0, unit: pallets === 1 ? 'pallet' : 'pallets', label: 'Sod needed' },
     sub: `Or ${units2} ${state.sodType === 'big' ? 'big rolls' : state.sodType === 'roll' ? 'small rolls' : 'slabs'} loose. Plan to lay within 24 hours of delivery.`,
     breakdown: isImp ? [
-      { label: 'Lawn area',        value: `${XF.int(sf)} sq ft` },
-      { label: 'Metric',           value: `${XF.dec(sqM, 1)} m²` },
-      { label: 'With 7% waste',    value: `${XF.int(withWaste)} sq ft` },
+      { label: 'Lawn area',        value: `${fmt.int(sf)} sq ft` },
+      { label: 'Metric',           value: `${fmt.dec(sqM, 1)} m²` },
+      { label: 'With 7% waste',    value: `${fmt.int(withWaste)} sq ft` },
       { label: 'Pallets (450 sf)', value: `${pallets}` },
       { label: 'Loose units',      value: `${units2}` },
     ] : [
-      { label: 'Lawn area',        value: `${XF.dec(sqM, 1)} m²` },
-      { label: 'Imperial',         value: `${XF.int(sf)} sq ft` },
-      { label: 'With 7% waste',    value: `${XF.dec(withWasteSm, 1)} m²` },
+      { label: 'Lawn area',        value: `${fmt.dec(sqM, 1)} m²` },
+      { label: 'Imperial',         value: `${fmt.int(sf)} sq ft` },
+      { label: 'With 7% waste',    value: `${fmt.dec(withWasteSm, 1)} m²` },
       { label: 'Pallets (≈42 m²)', value: `${pallets}` },
       { label: 'Loose units',      value: `${units2}` },
     ],
@@ -571,16 +547,16 @@ function TrimCeilingPaintCalculator({ state, setField, units }) {
       <div className="field">
         <label className="field-label">Room dimensions</label>
         <div className="field-row">
-          <XNI value={length} onChange={(v) => setField('length', v)} unit={isImp ? 'ft' : 'm'} min={1} max={200}/>
-          <XNI value={width} onChange={(v) => setField('width', v)} unit={isImp ? 'ft' : 'm'} min={1} max={200}/>
+          <NumberInput value={length} onChange={(v) => setField('length', v)} unit={isImp ? 'ft' : 'm'} min={1} max={200}/>
+          <NumberInput value={width} onChange={(v) => setField('width', v)} unit={isImp ? 'ft' : 'm'} min={1} max={200}/>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 6, fontSize: 11.5, color: 'var(--fg-subtle)' }}>
+        <div className="field-row-labels">
           <span>Length</span><span>Width</span>
         </div>
       </div>
       <div className="field">
         <label className="field-label">Ceiling height</label>
-        <XNI
+        <NumberInput
           value={height}
           onChange={(v) => setField('height', v)}
           unit={isImp ? 'ft' : 'm'}
@@ -591,31 +567,27 @@ function TrimCeilingPaintCalculator({ state, setField, units }) {
       </div>
       <div className="field">
         <label className="field-label">Baseboard height <span className="field-hint">trim width</span></label>
-        <XSL value={trimWidth} onChange={(v) => setField('trimWidth', v)} min={2} max={8} step={0.25} format={v => `${v}"`}/>
+        <Slider value={trimWidth} onChange={(v) => setField('trimWidth', v)} min={2} max={8} step={0.25} format={v => `${v}"`}/>
       </div>
       <div className="field-row">
         <div className="field" style={{ marginTop: 0 }}>
           <label className="field-label">Doors</label>
-          <XNI value={doors} onChange={(v) => setField('doors', v)} min={0} max={20}/>
+          <NumberInput value={doors} onChange={(v) => setField('doors', v)} min={0} max={20}/>
         </div>
         <div className="field" style={{ marginTop: 0 }}>
           <label className="field-label">Windows</label>
-          <XNI value={windows} onChange={(v) => setField('windows', v)} min={0} max={20}/>
+          <NumberInput value={windows} onChange={(v) => setField('windows', v)} min={0} max={20}/>
         </div>
       </div>
       <div className="field">
         <label className="field-label">Coats</label>
-        <XSL value={coats} onChange={(v) => setField('coats', v)} min={1} max={3} step={1} format={v => `${v} coat${v > 1 ? 's' : ''}`}/>
+        <Slider value={coats} onChange={(v) => setField('coats', v)} min={1} max={3} step={1} format={v => `${v} coat${v > 1 ? 's' : ''}`}/>
       </div>
     </>
   );
 }
 TrimCeilingPaintCalculator.convertState = function (s, from, to) {
-  if (from === to) return s;
-  const m2ft = 3.28084, ft2m = 0.3048;
-  const k = from === 'imperial' && to === 'metric' ? ft2m : m2ft;
-  const dec = from === 'imperial' && to === 'metric' ? 2 : 1;
-  return { ...s, length: +(s.length * k).toFixed(dec), width: +(s.width * k).toFixed(dec), height: +(s.height * k).toFixed(dec) };
+  return convertDims(s, ['length', 'width', 'height'], from, to);
 };
 TrimCeilingPaintCalculator.compute = function (state, units) {
   const isImp = units === 'imperial';
@@ -634,8 +606,6 @@ TrimCeilingPaintCalculator.compute = function (state, units) {
   const trimGal = totalTrim / 400;
   const totalGal = ceilingGal + trimGal;
   const totalL = totalGal * 3.78541;
-  const sm = (sf) => sf * 0.092903;
-  const m = (lf) => lf * 0.3048;
   return {
     primary: {
       value: isImp ? totalGal : totalL,
@@ -645,19 +615,19 @@ TrimCeilingPaintCalculator.compute = function (state, units) {
     },
     sub: isImp
       ? `That's ${Math.ceil(ceilingGal)} gal of ceiling paint and ${Math.ceil(trimGal)} gal of semi-gloss trim — buy them separately, they're different sheens.`
-      : `That's ${XF.dec(ceilingGal * 3.78541, 1)} L of ceiling paint and ${XF.dec(trimGal * 3.78541, 1)} L of semi-gloss trim — buy them separately, they're different sheens.`,
+      : `That's ${fmt.dec(ceilingGal * 3.78541, 1)} L of ceiling paint and ${fmt.dec(trimGal * 3.78541, 1)} L of semi-gloss trim — buy them separately, they're different sheens.`,
     breakdown: isImp ? [
-      { label: 'Ceiling area',      value: `${XF.int(ceilingArea)} sq ft` },
-      { label: 'Baseboard (lf)',    value: `${XF.int(perimeter)} lf` },
-      { label: 'Trim area',         value: `${XF.dec(trimAreaSf, 1)} sq ft` },
-      { label: 'Ceiling paint',     value: `${XF.dec(ceilingGal, 2)} gal (${Math.ceil(ceilingGal)})` },
-      { label: 'Trim paint',        value: `${XF.dec(trimGal, 2)} gal (${Math.ceil(trimGal)})` },
+      { label: 'Ceiling area',      value: `${fmt.int(ceilingArea)} sq ft` },
+      { label: 'Baseboard (lf)',    value: `${fmt.int(perimeter)} lf` },
+      { label: 'Trim area',         value: `${fmt.dec(trimAreaSf, 1)} sq ft` },
+      { label: 'Ceiling paint',     value: `${fmt.dec(ceilingGal, 2)} gal (${Math.ceil(ceilingGal)})` },
+      { label: 'Trim paint',        value: `${fmt.dec(trimGal, 2)} gal (${Math.ceil(trimGal)})` },
     ] : [
-      { label: 'Ceiling area',      value: `${XF.dec(sm(ceilingArea), 1)} m²` },
-      { label: 'Baseboard',         value: `${XF.dec(m(perimeter), 1)} m` },
-      { label: 'Trim area',         value: `${XF.dec(sm(trimAreaSf), 2)} m²` },
-      { label: 'Ceiling paint',     value: `${XF.dec(ceilingGal * 3.78541, 1)} L (${Math.ceil(ceilingGal * 3.78541)})` },
-      { label: 'Trim paint',        value: `${XF.dec(trimGal * 3.78541, 1)} L (${Math.ceil(trimGal * 3.78541)})` },
+      { label: 'Ceiling area',      value: `${fmt.dec(sm(ceilingArea), 1)} m²` },
+      { label: 'Baseboard',         value: `${fmt.dec(toMeters(perimeter), 1)} m` },
+      { label: 'Trim area',         value: `${fmt.dec(sm(trimAreaSf), 2)} m²` },
+      { label: 'Ceiling paint',     value: `${fmt.dec(ceilingGal * 3.78541, 1)} L (${Math.ceil(ceilingGal * 3.78541)})` },
+      { label: 'Trim paint',        value: `${fmt.dec(trimGal * 3.78541, 1)} L (${Math.ceil(trimGal * 3.78541)})` },
     ],
   };
 };
