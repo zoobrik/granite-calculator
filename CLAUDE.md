@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Static single-page site: a collection of construction-material calculators (paint, concrete, drywall, tile, lumber, roofing, landscape) for homeowners. React 18 (production UMD) is loaded from the `unpkg` CDN, plus 12 pre-transpiled `dist/*.js` scripts built from `src/*.jsx` via esbuild. `@babel/standalone` was removed from runtime in 2026-05 — it cost ~1 MB on download and ~3 s of main-thread parsing on slow devices. JSX now lives only in source; the browser only sees plain JS.
 
-Production domain: `granitecalculator.com`. Used in `index.html` (canonical, og:url, JSON-LD url + email), `sitemap.xml` (every entry), `robots.txt` (sitemap pointer), and `src/layout.jsx` (footer mailto). Keep these in sync if it ever changes.
+Production domain: `granitecalculator.com`. Used in `index.html` (canonical, og:url, JSON-LD url + email), `granitecalculator-sitemap.xml` (every entry), `robots.txt` (sitemap pointer), and `src/layout.jsx` (footer mailto). Keep these in sync if it ever changes.
 
 GitHub repo: `https://github.com/zoobrik/granite-calculator`. Hosted on Cloudflare Pages — auto-deploys every push to `main`. Cloudflare's GitHub OAuth occasionally drops; if a push doesn't trigger a build, reconnect via Pages project → Settings → Builds & deployments → Source → Reconnect, then push another commit. Direct upload via `wrangler pages deploy . --project-name=granite-calculator` works as a fallback (needs `wrangler login` first AND a freshly-built `dist/`).
 
@@ -143,7 +143,7 @@ Step also drops to `0.1` in metric so users can dial in fractional meters cleanl
 1. Add a row to the `calculators` array in `src/data.jsx` (slug, category, icon, title, desc, popular, time).
 2. Implement the component in `src/calculators.jsx`, `src/more-calculators.jsx`, or `src/extra-calculators.jsx` (whichever has room) and register it on `window.Calcs[slug]`.
 3. The category must already exist in `categories` in `src/data.jsx`, otherwise `CategoryPage` won't link to it.
-4. **Add a `<url>` entry to `sitemap.xml`** under `https://granitecalculator.com/c/<category>/<slug>`. Sitemap is hand-maintained, not generated.
+4. **Add a `<url>` entry to `granitecalculator-sitemap.xml`** under `https://granitecalculator.com/c/<category>/<slug>` with today's `<lastmod>`. Sitemap is hand-maintained, not generated. Submitted to Google Search Console + Bing Webmaster as `https://granitecalculator.com/granitecalculator-sitemap.xml` (renamed from `sitemap.xml` 2026-05-23 — file uses unique name to avoid generic-name conflicts).
 5. Optionally add a card visualization to `src/viz.jsx` keyed by slug. Without one the card renders an empty viz panel (still styled, just no SVG).
 
 No script tag changes are needed unless you create a new `.jsx` file (in which case add it to `index.html` in the right load-order slot).
@@ -179,7 +179,7 @@ Each page sets its own SEO in a `useEffect`:
 
 Static SEO baseline lives in `index.html`: meta description, OpenGraph, Twitter card, default `WebSite` + `Organization` JSON-LD graph, inline SVG favicon + `apple-touch-icon`, `og:image` (inline SVG data URL), and a `<noscript>` block that lists every calculator as real anchor links so non-JS crawlers see the full nav.
 
-`robots.txt` points at `sitemap.xml`; both reference the absolute domain and need to be kept in sync with any domain change.
+`robots.txt` points at `granitecalculator-sitemap.xml`; both reference the absolute domain and need to be kept in sync with any domain change.
 
 `site.webmanifest` enables install-as-app on mobile.
 
