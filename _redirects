@@ -1,4 +1,5 @@
-# Cloudflare Pages / Netlify SPA fallback.
-# Serve index.html for any path the host doesn't recognize so the
-# in-browser router can render the correct route.
-/*    /index.html   200
+# Cloudflare Pages SPA fallback.
+# CF Pages rejects /*  /index.html  200 as an "infinite loop" (strips .html → re-matches /*).
+# Use explicit route prefixes instead — covers all app routes without triggering the detector.
+/c/*          /index.html   200
+/category/*   /index.html   200
