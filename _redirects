@@ -1,5 +1,5 @@
 # Cloudflare Pages SPA fallback.
-# CF Pages rejects /*  /index.html  200 as an "infinite loop" (strips .html → re-matches /*).
-# Use explicit route prefixes instead — covers all app routes without triggering the detector.
-/c/*          /index.html   200
-/category/*   /index.html   200
+# CF Pages rejects any rule targeting /index.html (strips .html extension, triggering loop detection).
+# Rewrite to / instead — CF Pages serves index.html as the default document for /.
+/c/*          /   200
+/category/*   /   200
