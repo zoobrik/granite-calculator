@@ -2,6 +2,23 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## SEO recheck command
+
+When the user types **"recheck"**, run this sequence automatically:
+
+1. Test deep URLs return 200 (not 404):
+   ```
+   curl -o /dev/null -w "%{http_code}" https://granitecalculator.com/c/paint/wall-paint
+   curl -o /dev/null -w "%{http_code}" https://granitecalculator.com/category/paint
+   ```
+2. Check how many pages Google has indexed:
+   Search `site:granitecalculator.com` and report the count.
+3. Report findings and tell user what to do in GSC:
+   - If deep URLs still 404 → `_redirects` broken, investigate.
+   - If indexed count < 10 and it's been < 2 weeks → normal, wait.
+   - If indexed count < 10 and it's been > 2 weeks → go to GSC → Indexing → Pages → check "Not indexed" reasons, report back.
+   - If indexed count growing → good, note which pages are in and which aren't.
+
 ## Project
 
 Static single-page site: a collection of construction-material calculators (paint, concrete, drywall, tile, lumber, roofing, landscape) for homeowners. React 18 (production UMD) is loaded from the `unpkg` CDN, plus 12 pre-transpiled `dist/*.js` scripts built from `src/*.jsx` via esbuild. `@babel/standalone` was removed from runtime in 2026-05 — it cost ~1 MB on download and ~3 s of main-thread parsing on slow devices. JSX now lives only in source; the browser only sees plain JS.
