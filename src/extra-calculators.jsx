@@ -4,6 +4,17 @@
 const { NumberInput, PillToggle, Slider, fmt } = window.Primitives;
 const { toFt: toFt3, convertDims, sm, m: toMeters, liters, L_PER_GAL } = window.Conv;
 
+function formatInchFraction(value) {
+  const sixteenths = Math.round((parseFloat(value) || 0) * 16);
+  if (sixteenths <= 0) return '0"';
+  const gcd = (a, b) => b === 0 ? a : gcd(b, a % b);
+  const divisor = gcd(sixteenths, 16);
+  const numerator = sixteenths / divisor;
+  const denominator = 16 / divisor;
+  if (denominator === 1) return `${numerator}"`;
+  return `${numerator}/${denominator}"`;
+}
+
 // ============================================================
 // FOOTING & PIER — concrete pier or rectangular footing
 // ============================================================
@@ -63,7 +74,17 @@ function FootingPierCalculator({ state, setField, units }) {
         <h3 className="subsection-title">Common sizes</h3>
         <div className="btn-row">
           {[['8" deck pier', 'tube', 8, 4], ['10" pier', 'tube', 10, 4], ['12" pier', 'tube', 12, 4], ['16" pier', 'tube', 16, 4]].map(([label, t, d, h]) => (
-            <button key={label} className="btn btn-secondary btn-sm" onClick={() => { setField('type', t); setField('diameter', d); setField('height', h); }}>{label}</button>
+            <button
+              key={label}
+              className="btn btn-secondary btn-sm"
+              onClick={() => {
+                setField('type', t);
+                setField('diameter', isImp ? d : +(d * 2.54).toFixed(1));
+                setField('height', isImp ? h : +(h * 0.3048).toFixed(2));
+              }}
+            >
+              {label}
+            </button>
           ))}
         </div>
       </div>
@@ -222,7 +243,7 @@ function GroutThinsetCalculator({ state, setField, units }) {
       </div>
       <div className="field">
         <label className="field-label">Grout joint width</label>
-        <Slider value={jointWidth} onChange={(v) => setField('jointWidth', v)} min={1/16} max={1/2} step={1/16} format={v => `${(v * 16).toFixed(0)}/16"`}/>
+        <Slider value={jointWidth} onChange={(v) => setField('jointWidth', v)} min={1/16} max={1/2} step={1/16} format={formatInchFraction}/>
       </div>
       <div className="field">
         <label className="field-label">Tile thickness <span className="field-hint">affects thinset coverage</span></label>
@@ -261,11 +282,11 @@ GroutThinsetCalculator.compute = function (state) {
   const bagsThinset = Math.max(1, Math.ceil(sf * thickFactor * 1.10 / thinsetCoverage));
   return {
     primary: { value: bagsThinset, decimals: 0, unit: bagsThinset === 1 ? 'bag' : 'bags', label: 'Thinset (50 lb bags)' },
-    sub: `Plus ${bags25} bag${bags25 > 1 ? 's' : ''} of grout — ${fmt.dec(totalLbs, 1)} lbs total for a ${(J * 16).toFixed(0)}/16" joint. Both numbers include a 10% safety margin.`,
+    sub: `Plus ${bags25} bag${bags25 > 1 ? 's' : ''} of grout — ${fmt.dec(totalLbs, 1)} lbs total for a ${formatInchFraction(J)} joint. Both numbers include a 10% safety margin.`,
     breakdown: [
       { label: 'Tile area',            value: `${fmt.int(sf)} sq ft` },
       { label: 'Tile size',            value: `${T}" × ${T}"` },
-      { label: 'Joint width',          value: `${(J * 16).toFixed(0)}/16"` },
+      { label: 'Joint width',          value: formatInchFraction(J) },
       { label: 'Grout (dry, +10%)',    value: `${fmt.dec(totalLbs, 1)} lbs` },
       { label: 'Grout bags (25 lb)',   value: `${bags25}` },
       { label: 'Thinset bags (50 lb)', value: `${bagsThinset}` },
@@ -418,7 +439,7 @@ function DeckBoardsCalculator({ state, setField, units }) {
       </div>
       <div className="field">
         <label className="field-label">Gap between boards</label>
-        <Slider value={gap} onChange={(v) => setField('gap', v)} min={0} max={0.5} step={1/16} format={v => v === 0 ? 'tight' : `${(v * 16).toFixed(0)}/16"`}/>
+        <Slider value={gap} onChange={(v) => setField('gap', v)} min={0} max={0.5} step={1/16} format={v => v === 0 ? 'tight' : formatInchFraction(v)}/>
       </div>
     </>
   );
@@ -429,7 +450,8 @@ DeckBoardsCalculator.compute = function (state) {
   const W = parseFloat(state.width) || 0;
   const bw = parseFloat(state.boardWidth) || 5.5;            // actual inches
   const bl = parseFloat(state.boardLength) || 12;
-  const gap = parseFloat(state.gap) || 0.125;
+  const parsedGap = parseFloat(state.gap);
+  const gap = Number.isFinite(parsedGap) ? parsedGap : 0.125;
   const runLengthFt = state.orientation === 'length' ? L : W;
   const perpFt = state.orientation === 'length' ? W : L;
   // Rows of boards across the perpendicular direction.

@@ -1,35 +1,20 @@
 // Smoke-test: very small inputs in every calc. Flag outputs that look
 // disproportionate (e.g. "1 bucket for 5 sq ft" or "8 bags for tiny slab").
-global.React = { useState: () => [null, () => {}], useEffect: () => {},
-  useMemo: (f) => f(), useRef: () => ({ current: null }), useCallback: (f) => f };
 const fmt = {
   num: (n, d = 0) => isFinite(n) ? Number(n).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }) : '0',
   int: (n) => fmt.num(n, 0), dec: (n, d = 2) => fmt.num(n, d),
 };
-global.window = { Primitives: { fmt, NumberInput: () => null, PillToggle: () => null, Slider: () => null,
-  AnimatedNumber: () => null, useTheme: () => [null, () => {}], useLocalStorage: () => [null, () => {}],
-  useCountUp: (v) => v, useToast: () => [() => {}, null] },
-  Calcs: {}, Data: {}, Icons: new Proxy({}, { get: () => () => null }) };
-global.Icons = global.window.Icons;
-const fs = require('fs'), path = require('path');
-const babel = require('/tmp/parsechk/node_modules/@babel/core');
-for (const f of ['data.jsx','primitives.jsx','calculators.jsx','more-calculators.jsx','extra-calculators.jsx']) {
-  const code = fs.readFileSync(path.join(__dirname, '..', 'src', f), 'utf8');
-  const t = babel.transformSync(code, {
-    presets: [[require.resolve('/tmp/parsechk/node_modules/@babel/preset-env'), { targets: { node: 'current' } }]],
-    plugins: [[require.resolve('/tmp/parsechk/node_modules/@babel/plugin-transform-react-jsx'), { runtime: 'classic' }]],
-  }).code;
-  new Function('window', 'React', 'Icons', t)(window, React, Icons);
-}
+const { loadCalcs } = require('./load-calcs');
+loadCalcs();
 
 const cases = [
   // [name, slug, state, units, brief expectation]
   ['Wall paint — 6×8 ft closet, 8 ft ceiling, 1 door',
     'wall-paint', { length: 6, width: 8, height: 8, doors: 1, windows: 0, coats: 2, coverage: 350 }, 'imperial',
-    'a quart or so'],
+    'a little over 1 gallon'],
   ['Wall paint — 2×2 m bathroom, 2.4 m ceiling',
     'wall-paint', { length: 2, width: 2, height: 2.4, doors: 1, windows: 0, coats: 2, coverage: 8.6 }, 'metric',
-    'around 1 L'],
+    'around 4 L'],
   ['Concrete slab — 2×2 ft × 4″',
     'concrete-slab', { shape: 'rect', length: 2, width: 2, diameter: 4, thickness: 4 }, 'imperial',
     'a couple bags'],
@@ -60,7 +45,7 @@ const cases = [
     '16 sf'],
   ['Footing/pier — 1 × 8″ tube × 4 ft',
     'footing-pier', { type: 'tube', diameter: 8, length: 2, width: 2, height: 4, qty: 1 }, 'imperial',
-    '1-2 bags'],
+    '3-4 bags'],
   ['Grout — 5 sf, 4″ tile, 1/16 joint, thin',
     'grout-thinset', { area: 5, tileSize: 4, jointWidth: 1/16, thickness: 'thin' }, 'imperial',
     'minimal'],

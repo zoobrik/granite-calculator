@@ -1,33 +1,6 @@
 // Metric mode + convertState round-trip verification.
-const { execSync } = require('child_process');
-
-global.React = {
-  useState: () => [null, () => {}], useEffect: () => {}, useMemo: (f) => f(),
-  useRef: () => ({ current: null }), useCallback: (f) => f,
-};
-const fmt = {
-  num: (n, d = 0) => isFinite(n) ? Number(n).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }) : '0',
-  int: (n) => fmt.num(n, 0),
-  dec: (n, d = 2) => fmt.num(n, d),
-};
-global.window = {
-  Primitives: { fmt, NumberInput: () => null, PillToggle: () => null, Slider: () => null,
-    AnimatedNumber: () => null, useTheme: () => [null, () => {}],
-    useLocalStorage: () => [null, () => {}], useCountUp: (v) => v, useToast: () => [() => {}, null] },
-  Calcs: {}, Data: {}, Icons: new Proxy({}, { get: () => () => null }),
-};
-global.Icons = global.window.Icons;
-
-const fs = require('fs'), path = require('path');
-const babel = require('/tmp/parsechk/node_modules/@babel/core');
-for (const f of ['data.jsx', 'primitives.jsx', 'calculators.jsx', 'more-calculators.jsx', 'extra-calculators.jsx']) {
-  const code = fs.readFileSync(path.join(__dirname, '..', 'src', f), 'utf8');
-  const t = babel.transformSync(code, {
-    presets: [[require.resolve('/tmp/parsechk/node_modules/@babel/preset-env'), { targets: { node: 'current' } }]],
-    plugins: [[require.resolve('/tmp/parsechk/node_modules/@babel/plugin-transform-react-jsx'), { runtime: 'classic' }]],
-  }).code;
-  new Function('window', 'React', 'Icons', t)(window, React, Icons);
-}
+const { loadCalcs } = require('./load-calcs');
+loadCalcs();
 
 let pass = 0, fail = 0;
 
@@ -100,13 +73,13 @@ metricEquivalent('drywall-sheets',
 metricEquivalent('tile-boxes',
   'tile-boxes',
   { length: 10, width: 8, tilePerBox: 10, waste: 10, pattern: 'straight' },
-  { length: 3.05, width: 2.44, tilePerBox: 10, waste: 10, pattern: 'straight' });
+  { length: 3.05, width: 2.44, tilePerBox: 0.93, waste: 10, pattern: 'straight' });
 
 // Mulch
 metricEquivalent('mulch',
   'mulch',
   { shape: 'rect', length: 20, width: 6, diameter: 10, depth: 3 },
-  { shape: 'rect', length: 6.10, width: 1.83, diameter: 3.05, depth: 8 });
+  { shape: 'rect', length: 6.10, width: 1.83, diameter: 3.05, depth: 7.62 });
 
 // Gravel
 metricEquivalent('gravel',

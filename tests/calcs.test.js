@@ -2,74 +2,8 @@
 // hand-checked reference values. Mocks window/React/Icons just enough to
 // load the compute functions from the source files without a browser.
 
-const fs = require('fs');
-const path = require('path');
-
-// --- Minimal mocks ---------------------------------------------------------
-global.React = {
-  useState: () => [null, () => {}],
-  useEffect: () => {},
-  useMemo: (fn) => fn(),
-  useRef: () => ({ current: null }),
-  useCallback: (fn) => fn,
-};
-
-const fmt = {
-  num: (n, d = 0) => isFinite(n) ? Number(n).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }) : '0',
-  int: (n) => fmt.num(n, 0),
-  dec: (n, d = 2) => fmt.num(n, d),
-};
-
-global.window = {
-  Primitives: {
-    fmt,
-    NumberInput: () => null, PillToggle: () => null, Slider: () => null,
-    AnimatedNumber: () => null, useTheme: () => [null, () => {}],
-    useLocalStorage: () => [null, () => {}], useCountUp: (v) => v, useToast: () => [() => {}, null],
-  },
-  Calcs: {},
-  Data: {},
-  Icons: new Proxy({}, { get: () => () => null }),
-};
-global.Icons = global.window.Icons;
-
-// --- Load source files (strip JSX-only chunks via Babel) ------------------
-const babel = (() => {
-  try { return require('/tmp/parsechk/node_modules/@babel/core'); }
-  catch { return null; }
-})();
-
-if (!babel) {
-  console.error('Need @babel/core. Install: cd /tmp/parsechk && npm i @babel/core @babel/preset-env @babel/plugin-syntax-jsx');
-  process.exit(1);
-}
-
-const srcDir = path.join(__dirname, '..', 'src');
-// Skip icons.jsx — `Icons` is mocked above as a Proxy.
-const order = [
-  'data.jsx',
-  'primitives.jsx',
-  'calculators.jsx',
-  'more-calculators.jsx',
-  'extra-calculators.jsx',
-];
-
-for (const f of order) {
-  let code = fs.readFileSync(path.join(srcDir, f), 'utf8');
-  const transpiled = babel.transformSync(code, {
-    presets: [[require.resolve('/tmp/parsechk/node_modules/@babel/preset-env'), { targets: { node: 'current' } }]],
-    plugins: [[require.resolve('/tmp/parsechk/node_modules/@babel/plugin-transform-react-jsx'), { runtime: 'classic' }]],
-  }).code;
-  try {
-    // Wrap in a function so any top-level `const`s are scoped to the file —
-    // matches the browser, where each <script> has its own scope.
-    new Function('window', 'React', 'Icons', transpiled)
-      (global.window, global.React, global.Icons);
-  } catch (e) {
-    console.error(`load ${f}:`, e.message);
-    process.exit(1);
-  }
-}
+const { loadCalcs } = require('./load-calcs');
+loadCalcs();
 
 // --- Test harness ---------------------------------------------------------
 let pass = 0, fail = 0;
@@ -179,7 +113,7 @@ test('footing 12in tube 4ft qty6', 'footing-pier',
 // thinset: 100*1.0*1.10/80 = 1.375; bags=ceil=2
 test('grout 100sf 12in 1/8 joint std', 'grout-thinset',
   { area: 100, tileSize: 12, jointWidth: 0.125, thickness: 'standard' }, 'imperial',
-  [['primary.value', 2, 0.001]]); // primary is thinset bags
+  [['primary.value', 2, 0.001], ['breakdown.2.value', '1/8"']]); // primary is thinset bags
 
 // Shingles: 40x30 footprint, 6/12 pitch, 50 lf ridge, 2 valleys
 // footprint=1200; mult=√1.25=1.118; roofArea=1342; waste=0.10+0.04=0.14; areaWithWaste=1530;
@@ -197,6 +131,12 @@ test('shingles 40x30 6/12 50lf 2valley', 'shingle-bundles',
 test('deck 16x12 5.5in 12ft length 1/8gap', 'deck-boards',
   { length: 16, width: 12, boardWidth: 5.5, boardLength: 12, orientation: 'length', gap: 0.125 }, 'imperial',
   [['primary.value', 39, 0.001]]);
+
+// Same deck with a true 0" gap: rowsAcross=ceil(144/5.5)=27;
+// lf=432; boardsExact=36; +10% waste => 40. This catches `gap || 0.125`.
+test('deck 16x12 5.5in 12ft length tight gap', 'deck-boards',
+  { length: 16, width: 12, boardWidth: 5.5, boardLength: 12, orientation: 'length', gap: 0 }, 'imperial',
+  [['primary.value', 40, 0.001]]);
 
 // Sod: 30x20, slab
 // sf=600, withWaste=642, pallets=ceil(642/450)=2
@@ -229,9 +169,10 @@ test('paint empty strings', 'wall-paint',
   [['primary.value', (v) => v === 0 || isNaN(v) === false]]);
 
 // Very large room
+// walls=2*(50+80)*12=3120; openings=(4*21)+(8*15)=204; paintable=2916; ×2 coats / 350 = 16.66 gal
 test('paint big room', 'wall-paint',
   { length: 50, width: 80, height: 12, doors: 4, windows: 8, coats: 2, coverage: 350 }, 'imperial',
-  [['primary.value', 17.81, 0.05]]);
+  [['primary.value', 16.66, 0.01]]);
 
 // Concrete with thickness='' (clear) — historical bug source
 test('concrete empty thickness', 'concrete-slab',

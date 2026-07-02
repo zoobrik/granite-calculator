@@ -21,8 +21,15 @@ function TileCalculator({ state, setField, units }) {
         </div>
       </div>
       <div className="field">
-        <label className="field-label">Box coverage <span className="field-hint">sq ft per box</span></label>
-        <NumberInput value={tilePerBox} onChange={(v) => setField('tilePerBox', v)} unit="sf/box" min={1} max={100}/>
+        <label className="field-label">Box coverage <span className="field-hint">{isImp ? 'sq ft per box' : 'm² per box'}</span></label>
+        <NumberInput
+          value={tilePerBox}
+          onChange={(v) => setField('tilePerBox', v)}
+          unit={isImp ? 'sf/box' : 'm²/box'}
+          min={isImp ? 1 : 0.1}
+          max={isImp ? 100 : 10}
+          step={isImp ? 1 : 0.1}
+        />
       </div>
       <div className="subsection">
         <h3 className="subsection-title">Layout</h3>
@@ -53,17 +60,27 @@ function TileCalculator({ state, setField, units }) {
   );
 }
 TileCalculator.convertState = function (state, from, to) {
-  return convertDims(state, ['length', 'width'], from, to);
+  if (from === to) return state;
+  const next = convertDims(state, ['length', 'width'], from, to);
+  if (state.tilePerBox != null && state.tilePerBox !== '') {
+    next.tilePerBox = from === 'imperial'
+      ? +(state.tilePerBox * SM_PER_SF).toFixed(2)
+      : +(state.tilePerBox / SM_PER_SF).toFixed(1);
+  }
+  return next;
 };
 TileCalculator.compute = function (state, units) {
   const isImp = units === 'imperial';
   const { length, width, tilePerBox, waste } = state;
   const area = toFt(length, isImp) * toFt(width, isImp);
   const adjusted = area * (1 + (waste || 0) / 100);
-  const boxes = Math.ceil(adjusted / (tilePerBox || 10));
+  const coverageInput = parseFloat(tilePerBox);
+  const coveragePerBox = coverageInput > 0 ? coverageInput : (isImp ? 10 : +(10 * SM_PER_SF).toFixed(2));
+  const coverageSf = isImp ? coveragePerBox : coveragePerBox / SM_PER_SF;
+  const boxes = coverageSf > 0 ? Math.ceil(adjusted / coverageSf) : 0;
   const sqM = area * 0.092903;
   const adjSm = adjusted * 0.092903;
-  const boxSm = (tilePerBox || 0) * 0.092903;
+  const boxSm = coverageSf * 0.092903;
   return {
     primary: { value: boxes, decimals: 0, unit: boxes === 1 ? 'box' : 'boxes', label: 'Order this many' },
     sub: isImp
@@ -74,7 +91,7 @@ TileCalculator.compute = function (state, units) {
       { label: 'Metric area',     value: `${fmt.dec(sqM, 2)} m²` },
       { label: 'Waste factor',    value: `+${waste}%` },
       { label: 'Total to cover',  value: `${fmt.int(adjusted)} sq ft` },
-      { label: 'Coverage / box',  value: `${tilePerBox} sq ft` },
+      { label: 'Coverage / box',  value: `${fmt.dec(coverageSf, 1)} sq ft` },
     ] : [
       { label: 'Floor area',      value: `${fmt.dec(sqM, 2)} m²` },
       { label: 'Imperial area',   value: `${fmt.dec(area, 1)} sq ft` },

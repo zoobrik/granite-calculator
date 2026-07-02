@@ -5,7 +5,8 @@
   "scripts": {
     "build": "node build.js",
     "dev": "node build.js --watch",
-    "serve": "npx serve -s ."
+    "serve": "npx serve -s .",
+    "test": "node tests/calcs.test.js && node tests/metric.test.js && node tests/small-room.test.js"
   },
   "devDependencies": {
     "esbuild": "^0.21.0"
